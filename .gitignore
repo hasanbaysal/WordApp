@@ -12,5 +12,3 @@ obj/
 *.user
 *.suo
 .vs/
-
- Migrations/
