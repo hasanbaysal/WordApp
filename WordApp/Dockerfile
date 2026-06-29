@@ -17,9 +17,8 @@ RUN dotnet publish "WordApp.csproj" \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-# Güvenlik: root olmayan kullanıcı
-RUN adduser --disabled-password --gecos "" appuser
-USER appuser
+# Güvenlik: .NET imajı zaten 'app' kullanıcısıyla geliyor
+USER app
 
 COPY --from=build /app/publish .
 
