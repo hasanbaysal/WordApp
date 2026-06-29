@@ -1,0 +1,16 @@
+
+.env
+.env.*
+!.env.example
+
+appsettings.json
+appsettings.Production.json
+appsettings.Development.json
+
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+ Migrations/
