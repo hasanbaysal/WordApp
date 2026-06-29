@@ -1,0 +1,139 @@
+@model WordApp.Models.WordItem
+@using WordApp.Models
+
+@{
+    ViewData["Title"] = "Yeni Kelime Ekle";
+}
+
+<!-- Quill Theme CSS CDN -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
+
+<div class="form-panel">
+    <h2 class="form-title"><i class="bi bi-plus-circle text-primary"></i> Yeni Kelime Ekle</h2>
+
+    <form asp-action="Create" id="wordForm" method="post">
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger border-0 rounded-3 bg-danger bg-opacity-10 text-danger p-3 mb-4" role="alert">
+                Lütfen formdaki hataları düzeltin.
+            </div>
+        }
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label asp-for="Word" class="form-label text-muted fw-500">Kelime</label>
+                <input asp-for="Word" class="form-control filter-control w-100" placeholder="Örn: Serendipity" required />
+                <span asp-validation-for="Word" class="text-danger small"></span>
+            </div>
+            
+            <div class="col-md-3 col-sm-6">
+                <label asp-for="Type" class="form-label text-muted fw-500">Tür</label>
+                <select asp-for="Type" class="form-select filter-control w-100" required>
+                    @foreach (var type in Enum.GetValues<WordType>())
+                    {
+                        <option value="@type">@TranslateType(type)</option>
+                    }
+                </select>
+                <span asp-validation-for="Type" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <label asp-for="Level" class="form-label text-muted fw-500">Seviye</label>
+                <select asp-for="Level" class="form-select filter-control w-100" required>
+                    @foreach (var level in Enum.GetValues<WordLevel>())
+                    {
+                        <option value="@level">@level</option>
+                    }
+                </select>
+                <span asp-validation-for="Level" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label asp-for="UkMp3" class="form-label text-muted fw-500">İngiliz Aksanı Telaffuz (UK MP3 Link)</label>
+                <input asp-for="UkMp3" class="form-control filter-control w-100" placeholder="https://..." />
+                <span asp-validation-for="UkMp3" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="UsMp3" class="form-label text-muted fw-500">Amerikan Aksanı Telaffuz (US MP3 Link)</label>
+                <input asp-for="UsMp3" class="form-control filter-control w-100" placeholder="https://..." />
+                <span asp-validation-for="UsMp3" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label text-muted fw-500">Notlar ve Örnek Cümleler</label>
+            <!-- Quill Editor Container -->
+            <div id="editor-container"></div>
+            <!-- Hidden textarea to bind with model -->
+            <textarea asp-for="Notes" style="display:none;" id="notes-textarea"></textarea>
+            <span asp-validation-for="Notes" class="text-danger small"></span>
+        </div>
+
+        <div class="d-flex gap-3 mt-5">
+            <button type="submit" class="btn-indigo">
+                <i class="bi bi-check-lg"></i> Kaydet ve Ekle
+            </button>
+            <a asp-action="Index" class="btn-secondary-custom">
+                <i class="bi bi-x-circle"></i> İptal
+            </a>
+        </div>
+    </form>
+</div>
+
+@functions {
+    string TranslateType(WordType type)
+    {
+        return type switch
+        {
+            WordType.Adverb => "Zarf",
+            WordType.AuxiliaryVerb => "Yardımcı Fiil",
+            WordType.Conjunction => "Bağlaç",
+            WordType.DefiniteArticle => "Definite Article (the)",
+            WordType.Determiner => "Belirteç (Determiner)",
+            WordType.Exclamation => "Ünlem",
+            WordType.IndefiniteArticle => "Indefinite Article (a/an)",
+            WordType.InfinitiveMarker => "Mastar Eki (to)",
+            WordType.LinkingVerb => "Bağlama Fiili",
+            WordType.ModalVerb => "Modal Fiili",
+            WordType.Noun => "İsim",
+            WordType.Number => "Sayı",
+            WordType.OrdinalNumber => "Sıra Sayısı",
+            WordType.Preposition => "Edat",
+            WordType.Pronoun => "Zamir",
+            WordType.Verb => "Fiil",
+            WordType.Adjective => "Sıfat",
+            _ => type.ToString()
+        };
+    }
+}
+
+@section Scripts {
+    <!-- Quill Library JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Initialize Quill Editor
+            var quill = new Quill('#editor-container', {
+                theme: 'snow',
+                placeholder: 'Kelimelerin Türkçe anlamlarını, örnek cümlelerini ve çalışma notlarını buraya ekleyin...',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['clean']
+                    ]
+                }
+            });
+
+            // Bind Quill content to hidden textarea on form submit
+            var form = document.getElementById('wordForm');
+            form.onsubmit = function () {
+                var notesTextarea = document.getElementById('notes-textarea');
+                // Save the innerHTML of the editor into the textarea
+                notesTextarea.value = quill.root.innerHTML === '<p><br></p>' ? '' : quill.root.innerHTML;
+            };
+        });
+    </script>
+}

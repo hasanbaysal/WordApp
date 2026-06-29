@@ -1,0 +1,549 @@
+@using WordApp.Models
+@{
+    ViewData["Title"] = "Panel";
+}
+
+<div class="metrics-grid">
+    <div class="metric-card" id="metric-total">
+        <div class="metric-icon total">
+            <i class="bi bi-book"></i>
+        </div>
+        <div>
+            <div class="metric-value">@ViewBag.TotalWords</div>
+            <div class="metric-label">Toplam Kelime</div>
+        </div>
+    </div>
+    
+    <div class="metric-card" id="metric-learned">
+        <div class="metric-icon learned">
+            <i class="bi bi-check-circle"></i>
+        </div>
+        <div>
+            <div class="metric-value">@ViewBag.LearnedWords</div>
+            <div class="metric-label">Öğrenilenler</div>
+        </div>
+    </div>
+
+    <div class="metric-card" id="metric-due" style="cursor: pointer;">
+        <div class="metric-icon due">
+            <i class="bi bi-alarm"></i>
+        </div>
+        <div>
+            <div class="metric-value">@ViewBag.DueWords</div>
+            <div class="metric-label">Tekrarı Gelenler</div>
+        </div>
+    </div>
+
+    <div class="metric-card" id="metric-unlearned">
+        <div class="metric-icon unlearned">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div>
+            <div class="metric-value">@ViewBag.UnlearnedWords</div>
+            <div class="metric-label">Öğrenilmeyenler</div>
+        </div>
+    </div>
+</div>
+
+<!-- Text-to-Speech Panel -->
+<div class="tts-panel">
+    <div class="tts-header">
+        <div class="tts-icon-area">
+            <i class="bi bi-soundwave"></i>
+        </div>
+        <div>
+            <h3 class="tts-title">Text to Speech</h3>
+            <p class="tts-subtitle">İngilizce metin girin, sesli okusun</p>
+        </div>
+    </div>
+    <div class="tts-body">
+        <textarea id="tts-text" class="tts-textarea" placeholder="İngilizce metni buraya yazın..." rows="3"></textarea>
+        <div class="tts-controls">
+            <div class="tts-settings">
+                <div class="tts-setting-group">
+                    <label for="tts-voice" class="tts-label">Ses</label>
+                    <select id="tts-voice" class="form-select filter-control tts-select">
+                        <option value="">Yükleniyor...</option>
+                    </select>
+                </div>
+                <div class="tts-setting-group">
+                    <label for="tts-rate" class="tts-label">Hız</label>
+                    <div class="tts-range-wrapper">
+                        <input type="range" id="tts-rate" class="tts-range" min="0.3" max="2" step="0.1" value="0.9" />
+                        <span class="tts-range-value" id="tts-rate-value">0.9x</span>
+                    </div>
+                </div>
+            </div>
+            <div class="tts-buttons">
+                <button type="button" id="btn-tts-speak" class="btn-tts-play" title="Oku">
+                    <i class="bi bi-play-fill"></i>
+                    <span>Oku</span>
+                </button>
+                <button type="button" id="btn-tts-pause" class="btn-tts-secondary" title="Duraklat" style="display:none;">
+                    <i class="bi bi-pause-fill"></i>
+                </button>
+                <button type="button" id="btn-tts-stop" class="btn-tts-secondary" title="Durdur" style="display:none;">
+                    <i class="bi bi-stop-fill"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="filters-panel">
+    <div class="filters-title">
+        <i class="bi bi-filter-left text-primary"></i> Dinamik Filtreleme
+    </div>
+    <div class="row g-3">
+        <div class="col-md-3 col-sm-6">
+            <input type="text" id="search-input" class="form-control filter-control w-100" placeholder="Kelime ara..." />
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <select id="type-select" class="form-select filter-control w-100">
+                <option value="">Tüm Türler</option>
+                @foreach (var type in Enum.GetValues<WordType>())
+                {
+                    <option value="@type">@type</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <select id="level-select" class="form-select filter-control w-100">
+                <option value="">Tüm Seviyeler</option>
+                @foreach (var level in Enum.GetValues<WordLevel>())
+                {
+                    <option value="@level">@level</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <select id="status-select" class="form-select filter-control w-100">
+                <option value="">Öğrenme Durumu</option>
+                <option value="true">Öğrenildi</option>
+                <option value="false">Öğrenilmedi</option>
+            </select>
+        </div>
+        <div class="col-md-3 col-sm-12 d-flex gap-2 align-items-center">
+            <div class="form-check form-switch pt-2">
+                <input class="form-check-input" type="checkbox" id="due-checkbox">
+                <label class="form-check-label text-warning fw-500" for="due-checkbox">Sadece Tekrarlar</label>
+            </div>
+            <button id="clear-filters" class="btn btn-secondary-custom btn-sm-custom ms-auto" title="Filtreleri Temizle">
+                <i class="bi bi-x-circle"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Word Cards Container -->
+<div id="word-list-container">
+    <div class="text-center py-5" id="list-loader">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Yükleniyor...</span>
+        </div>
+        <p class="text-muted mt-2">Kelimeler yükleniyor...</p>
+    </div>
+    
+    <div class="word-grid" id="words-grid" style="display:none;">
+        <!-- Dynamic content via jQuery -->
+    </div>
+    
+    <div class="text-center py-5" id="no-words-placeholder" style="display:none;">
+        <i class="bi bi-search fs-1 text-muted"></i>
+        <h4 class="mt-3 text-secondary">Arama Kriterlerine Uygun Kelime Bulunamadı</h4>
+        <p class="text-muted">Filtreleri değiştirmeyi deneyebilir veya yeni bir kelime ekleyebilirsiniz.</p>
+        <a asp-action="Create" class="btn-indigo btn-sm-custom mt-2">
+            <i class="bi bi-plus-circle"></i> Yeni Kelime Ekle
+        </a>
+    </div>
+</div>
+
+<!-- Review Rating Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-custom-content">
+            <div class="modal-header modal-custom-header">
+                <h5 class="modal-title modal-custom-title" id="reviewModalLabel">Kelime Tekrarı</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-3">
+                    <h2 id="modal-word-title" class="fw-bold mb-2"></h2>
+                    <div class="d-flex justify-content-center gap-2 mb-3">
+                        <span id="modal-word-level" class="badge-custom"></span>
+                        <span id="modal-word-type" class="badge-custom badge-type"></span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-center gap-2 mb-4">
+                        <button type="button" id="modal-play-uk" class="btn-audio btn-indigo rounded-pill px-3 py-2 gap-2" style="display:none;">
+                            <i class="bi bi-volume-up-fill"></i> UK
+                        </button>
+                        <button type="button" id="modal-play-us" class="btn-audio btn-indigo rounded-pill px-3 py-2 gap-2" style="display:none;">
+                            <i class="bi bi-volume-up-fill"></i> US
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label text-muted fs-0.9 fw-500">Notlar ve Örnekler</label>
+                    <div id="modal-word-notes" class="bg-black bg-opacity-20 border border-secondary border-opacity-10 rounded-3 p-3 max-height-200 overflow-auto"></div>
+                </div>
+
+                <div class="border-top border-secondary border-opacity-10 pt-3">
+                    <label class="form-label text-warning fw-600 mb-2">Hatırlama Düzeyi (1 - 10)</label>
+                    <p class="text-muted small mb-3">Kelimeyi ne kadar iyi hatırladınız? 1 hiç hatırlamıyorum, 10 çok iyi hatırlıyorum.</p>
+                    
+                    <div class="rating-scale">
+                        @for (int i = 1; i <= 10; i++)
+                        {
+                            <button type="button" class="rating-btn" data-score="@i">@i</button>
+                        }
+                    </div>
+                    
+                    <div class="rating-labels">
+                        <span>1 - Unuttum</span>
+                        <span>5 - Zorlandım</span>
+                        <span>10 - Çok Kolaydı</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer modal-custom-footer justify-content-between">
+                <span class="text-muted small">SRS Sistemi, puanınıza göre yeni tekrar tarihini 1-15 gün aralığında belirleyecektir.</span>
+                <button type="button" class="btn btn-secondary-custom btn-sm-custom" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Infinite scroll sentinel -->
+<div id="scroll-sentinel" style="height:1px;"></div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            let activeWordId = null;
+
+            // ── Pagination state ────────────────────────────────────
+            let currentPage  = 1;
+            const PAGE_SIZE  = 100;
+            let isLoading    = false;
+            let hasMore      = true;
+            let currentFilters = {};
+
+            // ── Debounce helper ─────────────────────────────────────
+            function debounce(func, wait) {
+                let timeout;
+                return function(...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), wait);
+                };
+            }
+
+            // ── Read current filter values ───────────────────────────
+            function getFilters() {
+                return {
+                    search:    $("#search-input").val(),
+                    type:      $("#type-select").val(),
+                    level:     $("#level-select").val(),
+                    isLearned: $("#status-select").val(),
+                    dueOnly:   $("#due-checkbox").is(":checked")
+                };
+            }
+
+            // ── Reset and reload from page 1 ────────────────────────
+            function resetAndLoad() {
+                currentPage    = 1;
+                hasMore        = true;
+                currentFilters = getFilters();
+                $("#words-grid").empty();
+                $("#no-words-placeholder").hide();
+                $("#list-loader").show();
+                loadPage();
+            }
+
+            // ── Load a single page ───────────────────────────────────
+            function loadPage() {
+                if (isLoading || !hasMore) return;
+                isLoading = true;
+                $("#list-loader").show();
+
+                const params = {
+                    ...currentFilters,
+                    page:     currentPage,
+                    pageSize: PAGE_SIZE
+                };
+
+                $.getJSON("/Words/GetWords", params, function(data) {
+                    isLoading = false;
+                    $("#list-loader").hide();
+
+                    hasMore = data.hasMore;
+
+                    if (currentPage === 1 && (!data.items || data.items.length === 0)) {
+                        $("#no-words-placeholder").show();
+                        updateStats();
+                        return;
+                    }
+
+                    let html = "";
+                    $.each(data.items, function(_, word) {
+                        html += renderWordCard(word);
+                    });
+
+                    $("#words-grid").append(html).show();
+
+                    if (currentPage === 1) updateStats();
+
+                    currentPage++;
+
+                    // Re-observe sentinel in case it was above fold after appending
+                    observer.observe(document.getElementById("scroll-sentinel"));
+
+                }).fail(function() {
+                    isLoading = false;
+                    $("#list-loader").hide();
+                    alert("Kelimeler yüklenirken bir hata oluştu.");
+                });
+            }
+
+            // ── Infinite Scroll via IntersectionObserver ─────────────
+            const observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting && hasMore && !isLoading) {
+                        loadPage();
+                    }
+                });
+            }, { rootMargin: "200px" });
+
+            observer.observe(document.getElementById("scroll-sentinel"));
+
+            // ── Filter listeners ─────────────────────────────────────
+            $("#search-input").on("input", debounce(resetAndLoad, 350));
+            $("#type-select, #level-select, #status-select").on("change", resetAndLoad);
+            $("#due-checkbox").on("change", resetAndLoad);
+
+            // Metric card click - Quick Filter by Due
+            $("#metric-due").click(function() {
+                $("#due-checkbox").prop("checked", true).trigger("change");
+            });
+
+            // Clear filters
+            $("#clear-filters").click(function() {
+                $("#search-input").val("");
+                $("#type-select").val("");
+                $("#level-select").val("");
+                $("#status-select").val("");
+                $("#due-checkbox").prop("checked", false);
+                resetAndLoad();
+            });
+
+            // ── Initial load ─────────────────────────────────────────
+            resetAndLoad();
+
+            // ── Render a single word card ────────────────────────────
+            function renderWordCard(w) {
+                const badgeLevelClass = "badge-level " + w.level.toLowerCase();
+                let ukAudioBtn = w.ukMp3 ? `<button class="btn-audio" onclick="playWordAudio(this, '${w.ukMp3}')" title="İngiliz Telaffuzu"><i class="bi bi-volume-up"></i> UK</button>` : '';
+                let usAudioBtn = w.usMp3 ? `<button class="btn-audio" onclick="playWordAudio(this, '${w.usMp3}')" title="Amerikan Telaffuzu"><i class="bi bi-volume-up"></i> US</button>` : '';
+
+                let srsStatus = "";
+                let actionBtn = "";
+
+                if (w.isLearned) {
+                    const dueBadge = w.isDue
+                        ? '<span class="text-warning fw-600"><i class="bi bi-exclamation-triangle"></i> Tekrarı Geldi</span>'
+                        : `<span>Sonraki Tekrar: <strong>${w.nextReviewDate}</strong></span>`;
+                    srsStatus = `${dueBadge}<span class="mt-1">Aralık: <strong>${w.intervalDays} gün</strong></span>`;
+                    actionBtn = `
+                        <button class="btn-indigo btn-sm-custom py-1 px-2 open-review-modal"
+                            data-id="${w.id}" data-word="${w.word}" data-level="${w.level}"
+                            data-type="${w.type}" data-uk="${w.ukMp3 || ''}" data-us="${w.usMp3 || ''}">
+                            <i class="bi bi-arrow-repeat"></i> Tekrar Et
+                        </button>`;
+                } else {
+                    srsStatus = `<span class="text-danger"><i class="bi bi-x-circle"></i> Öğrenilmedi</span>`;
+                    actionBtn = `
+                        <button class="btn btn-success btn-sm-custom py-1 px-2 mark-learned-btn" data-id="${w.id}">
+                            <i class="bi bi-check-lg"></i> Öğrendim
+                        </button>`;
+                }
+
+                return `
+                    <div class="word-card" id="word-card-${w.id}">
+                        <div class="word-header">
+                            <div class="word-title-area">
+                                <h3 class="word-title">${w.word}</h3>
+                                <div class="badges-area">
+                                    <span class="badge-custom ${badgeLevelClass}">${w.level}</span>
+                                    <span class="badge-custom badge-type">${translateType(w.type)}</span>
+                                </div>
+                            </div>
+                            <div class="audio-controls">${ukAudioBtn}${usAudioBtn}</div>
+                        </div>
+                        <div class="word-body">
+                            ${w.notes || '<p class="text-muted small">Not eklenmemiş.</p>'}
+                        </div>
+                        <div class="word-footer">
+                            <div class="srs-info">${srsStatus}</div>
+                            <div class="action-buttons">
+                                ${actionBtn}
+                                <a href="/Words/Edit/${w.id}" class="btn btn-secondary-custom btn-sm-custom p-1 px-2" title="Düzenle">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button class="btn btn-secondary-custom btn-sm-custom text-danger p-1 px-2 delete-word-btn"
+                                    data-id="${w.id}" data-word="${w.word}" title="Sil">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            // ── Word Type translation ────────────────────────────────
+            function translateType(type) {
+                const types = {
+                    'Adverb': 'Zarf', 'AuxiliaryVerb': 'Yardımcı Fiil', 'Conjunction': 'Bağlaç',
+                    'DefiniteArticle': 'Definite Article (the)', 'Determiner': 'Belirteç (Determiner)',
+                    'Exclamation': 'Ünlem', 'IndefiniteArticle': 'Indefinite Article (a/an)',
+                    'InfinitiveMarker': 'Mastar Eki (to)', 'LinkingVerb': 'Bağlama Fiili',
+                    'ModalVerb': 'Modal Fiili', 'Noun': 'İsim', 'Number': 'Sayı',
+                    'OrdinalNumber': 'Sıra Sayısı', 'Preposition': 'Edat', 'Pronoun': 'Zamir',
+                    'Verb': 'Fiil', 'Adjective': 'Sıfat'
+                };
+                return types[type] || type;
+            }
+
+            // ── Lightweight stats update (uses /Words/GetStats) ──────
+            function updateStats() {
+                $.getJSON("/Words/GetStats", function(s) {
+                    $("#metric-total .metric-value").text(s.total);
+                    $("#metric-learned .metric-value").text(s.learned);
+                    $("#metric-due .metric-value").text(s.due);
+                    $("#metric-unlearned .metric-value").text(s.unlearned);
+                });
+            }
+
+            // ── Mark as Learned ──────────────────────────────────────
+            $(document).on("click", ".mark-learned-btn", function() {
+                const id  = $(this).data("id");
+                const $btn = $(this);
+                $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                $.post("/Words/MarkAsLearned", { id }, function(res) {
+                    if (res.success) { resetAndLoad(); }
+                    else { alert(res.message || "İşlem başarısız oldu."); $btn.prop("disabled", false).html('<i class="bi bi-check-lg"></i> Öğrendim'); }
+                });
+            });
+
+            // ── Open Review Modal ────────────────────────────────────
+            $(document).on("click", ".open-review-modal", function() {
+                activeWordId   = $(this).data("id");
+                const word     = $(this).data("word");
+                const level    = $(this).data("level");
+                const type     = $(this).data("type");
+                const ukMp3    = $(this).data("uk");
+                const usMp3    = $(this).data("us");
+
+                $("#modal-word-title").text(word);
+                $("#modal-word-level").text(level).attr("class", "badge-custom badge-level " + level.toLowerCase());
+                $("#modal-word-type").text(translateType(type));
+                const notes = $(`#word-card-${activeWordId} .word-body`).html();
+                $("#modal-word-notes").html(notes);
+
+                ukMp3 ? $("#modal-play-uk").show().off("click").on("click", () => playWordAudio(null, ukMp3)) : $("#modal-play-uk").hide();
+                usMp3 ? $("#modal-play-us").show().off("click").on("click", () => playWordAudio(null, usMp3)) : $("#modal-play-us").hide();
+
+                new bootstrap.Modal(document.getElementById('reviewModal')).show();
+            });
+
+            // ── Rating buttons ───────────────────────────────────────
+            $(".rating-btn").click(function() {
+                const score  = $(this).data("score");
+                if (!activeWordId) return;
+                const $btn   = $(this);
+                const orig   = $btn.text();
+                $btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                $.post("/Words/SubmitReview", { id: activeWordId, score }, function(res) {
+                    $btn.text(orig);
+                    if (res.success) {
+                        bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+                        resetAndLoad();
+                    } else {
+                        alert(res.message || "İnceleme kaydedilemedi.");
+                    }
+                });
+            });
+
+            // ── Delete word ──────────────────────────────────────────
+            $(document).on("click", ".delete-word-btn", function() {
+                const id   = $(this).data("id");
+                const word = $(this).data("word");
+                if (confirm(`"${word}" kelimesini silmek istediğinize emin misiniz?`)) {
+                    $.post("/Words/Delete", { id }, function(res) {
+                        if (res.success) {
+                            $(`#word-card-${id}`).fadeOut(300, function() {
+                                $(this).remove();
+                                updateStats();
+                            });
+                        } else {
+                            alert(res.message || "Kelime silinemedi.");
+                        }
+                    });
+                }
+            });
+
+            // ── TTS Feature ──────────────────────────────────────────
+            let ttsVoices = [];
+            function loadTTSVoices() {
+                ttsVoices = speechSynthesis.getVoices();
+                const $select = $('#tts-voice').empty();
+                const enVoices    = ttsVoices.filter(v => v.lang.startsWith('en'));
+                const otherVoices = ttsVoices.filter(v => !v.lang.startsWith('en'));
+                if (enVoices.length) {
+                    $select.append('<optgroup label="İngilizce Sesler">');
+                    enVoices.forEach((v, i) => $select.append(`<option value="${ttsVoices.indexOf(v)}" ${i===0?'selected':''}>${v.name} (${v.lang})</option>`));
+                    $select.append('</optgroup>');
+                }
+                if (otherVoices.length) {
+                    $select.append('<optgroup label="Diğer Sesler">');
+                    otherVoices.forEach(v => $select.append(`<option value="${ttsVoices.indexOf(v)}">${v.name} (${v.lang})</option>`));
+                    $select.append('</optgroup>');
+                }
+                if (!ttsVoices.length) $select.append('<option value="">Ses bulunamadı</option>');
+            }
+            if (speechSynthesis.getVoices().length) loadTTSVoices();
+            speechSynthesis.onvoiceschanged = loadTTSVoices;
+
+            $('#tts-rate').on('input', function() { $('#tts-rate-value').text($(this).val() + 'x'); });
+
+            $('#btn-tts-speak').click(function() {
+                const text = $('#tts-text').val().trim();
+                if (!text) { $('#tts-text').addClass('tts-textarea-error'); setTimeout(() => $('#tts-text').removeClass('tts-textarea-error'), 1500); return; }
+                speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                const voiceIdx  = $('#tts-voice').val();
+                if (voiceIdx !== '' && ttsVoices[voiceIdx]) utterance.voice = ttsVoices[voiceIdx];
+                utterance.rate  = parseFloat($('#tts-rate').val());
+                utterance.pitch = 1;
+                utterance.lang  = 'en-US';
+                utterance.onstart = () => { $('#btn-tts-speak').addClass('tts-speaking').find('span').text('Okunuyor...'); $('#btn-tts-speak i').attr('class','bi bi-soundwave'); $('#btn-tts-pause, #btn-tts-stop').show(); };
+                utterance.onend   = resetTTSUI;
+                utterance.onerror = resetTTSUI;
+                speechSynthesis.speak(utterance);
+            });
+
+            $('#btn-tts-pause').click(function() {
+                if (speechSynthesis.paused) { speechSynthesis.resume(); $(this).find('i').attr('class','bi bi-pause-fill').end().attr('title','Duraklat'); }
+                else                        { speechSynthesis.pause();  $(this).find('i').attr('class','bi bi-play-fill').end().attr('title','Devam Et'); }
+            });
+            $('#btn-tts-stop').click(function() { speechSynthesis.cancel(); resetTTSUI(); });
+
+            function resetTTSUI() {
+                $('#btn-tts-speak').removeClass('tts-speaking').find('span').text('Oku');
+                $('#btn-tts-speak i').attr('class','bi bi-play-fill');
+                $('#btn-tts-pause, #btn-tts-stop').hide();
+                $('#btn-tts-pause').find('i').attr('class','bi bi-pause-fill').end().attr('title','Duraklat');
+            }
+        });
+    </script>
+}
