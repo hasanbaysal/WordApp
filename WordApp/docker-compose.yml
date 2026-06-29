@@ -5,13 +5,11 @@ services:
       dockerfile: Dockerfile
     container_name: wordapp
     restart: unless-stopped
+    network_mode: "host"
     environment:
       # PostgreSQL artık host'ta — sunucunun localhost'una bağlanır
       #- ConnectionStrings__DefaultConnection=Host=host.docker.internal;Database=WordDb;Username=wordapp_user;Password=${POSTGRES_PASSWORD}
-      # docker-compose.yml içinde:
-
-      - ConnectionStrings__DefaultConnection=Host=172.17.0.1;Database=WordDb;Username=wordapp_user;Password=${POSTGRES_PASSWORD}
-      
+      - ConnectionStrings__DefaultConnection=Host=127.0.0.1;Database=WordDb;Username=wordapp_user;Password=${POSTGRES_PASSWORD}
       # Admin ayarları
       - AdminSettings__Username=${ADMIN_USERNAME}
       - AdminSettings__Password=${ADMIN_PASSWORD}
