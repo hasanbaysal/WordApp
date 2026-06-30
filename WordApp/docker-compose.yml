@@ -23,13 +23,13 @@ services:
       - NtfySettings__TopicUrl=${NTFY_TOPIC_URL}
       - NtfySettings__Enabled=true
       - ASPNETCORE_ENVIRONMENT=Production
-    extra_hosts:
-      - "host.docker.internal:host-gateway"   # Linux'ta host IP'ye erişim
-    ports:
-      - "127.0.0.1:5000:5000"   # Sadece localhost (Nginx proxy)
-    networks:
-      - wordapp_net
+#     extra_hosts:
+#       - "host.docker.internal:host-gateway"   # Linux'ta host IP'ye erişim
+#     ports:
+#       - "127.0.0.1:5000:5000"   # Sadece localhost (Nginx proxy)
+#     networks:
+#       - wordapp_net
 
-networks:
-  wordapp_net:
-    driver: bridge
+# networks:
+#   wordapp_net:
+#     driver: bridge
