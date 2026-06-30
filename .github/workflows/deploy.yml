@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Kodu çek
+      
       - name: Kodu Checkout Et
         uses: actions/checkout@v4
 
-      # 2. Sunucuya SSH ile bağlan ve deploy işlemlerini yap
+      
       - name: Sunucuya SSH Bağlan ve Deploy Et
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -25,18 +25,21 @@ jobs:
           script: |
             set -e
 
-            # Proje dizinine git (ilk deployta yoksa oluştur)
+            
             mkdir -p /opt/wordapp
             cd /opt/wordapp
 
-            # Repoyu güncelle (yoksa klonla)
+            
             if [ -d ".git" ]; then
               git pull origin main
             else
               git clone https://github.com/${{ github.repository }} .
             fi
 
-            # .env dosyasını GitHub Secrets'tan oluştur/güncelle
+           
+            cd WordApp
+
+            
             cat > .env << 'ENVEOF'
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
             ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}
@@ -47,13 +50,12 @@ jobs:
             NTFY_TOPIC_URL=${{ secrets.NTFY_TOPIC_URL }}
             ENVEOF
 
-            # .env dosyasının izinlerini kısıtla (sadece sahibi okusun)
             chmod 600 .env
 
-            # Docker container'ı yeniden oluştur ve başlat
-            docker compose -f WordApp/docker-compose.yml up -d --build
+           
+            docker compose up -d --build
 
-            # Eski Docker imajlarını temizle (disk dolmasın)
+            
             docker image prune -f
 
             echo "Deploy tamamlandı!"
