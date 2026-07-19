@@ -24,6 +24,29 @@ namespace WordApp.Services
             _logger = logger;
         }
 
+        private DateTime GetTurkeyTime()
+        {
+            TimeZoneInfo turkeyTimeZone;
+            try
+            {
+                turkeyTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                try
+                {
+                    turkeyTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                    // Fallback manually to UTC+3 (Turkey offset is fixed UTC+3 since 2016)
+                    turkeyTimeZone = TimeZoneInfo.CreateCustomTimeZone("Turkey Standard Time", TimeSpan.FromHours(3), "Turkey Standard Time", "Turkey Standard Time");
+                }
+            }
+
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, turkeyTimeZone);
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("Background Notification Service starting.");
@@ -42,17 +65,17 @@ namespace WordApp.Services
             {
                 try
                 {
-                    await CheckAndSendNotificationAsync();
+                    await CheckAndSendNotificationAsync(stoppingToken);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "An error occurred in CheckAndSendNotificationAsync.");
                 }
 
-                // Check every hour
+                // Check every 1 minute
                 try
                 {
-                    await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+                    await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
                 }
                 catch (TaskCanceledException)
                 {
@@ -63,8 +86,25 @@ namespace WordApp.Services
             _logger.LogInformation("Background Notification Service stopping.");
         }
 
-        private async Task CheckAndSendNotificationAsync()
+        private async Task CheckAndSendNotificationAsync(CancellationToken stoppingToken)
         {
+            var turkeyTime = GetTurkeyTime();
+            
+            // Check if current time falls within:
+            // 1. Morning Window: 09:00 - 09:15
+            // 2. Evening Window: 19:30 - 19:45
+            bool isMorningWindow = turkeyTime.Hour == 9 && turkeyTime.Minute >= 0 && turkeyTime.Minute < 15;
+            bool isEveningWindow = turkeyTime.Hour == 19 && turkeyTime.Minute >= 30 && turkeyTime.Minute < 45;
+
+            if (!isMorningWindow && !isEveningWindow)
+            {
+                return; // Exit early without hitting the database
+            }
+
+            string key = isMorningWindow ? "LastMorningNotificationSentDate" : "LastEveningNotificationSentDate";
+            string windowName = isMorningWindow ? "Morning (09:00)" : "Evening (19:30)";
+            var todayStr = turkeyTime.ToString("yyyy-MM-dd");
+
             using (var scope = _serviceProvider.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -80,26 +120,24 @@ namespace WordApp.Services
                     return;
                 }
 
-                var todayStr = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd");
-
-                // Check if notification already sent today
-                var lastSentSetting = await context.SystemSettings.FirstOrDefaultAsync(s => s.Key == "LastNotificationSentDate");
+                // Check if notification already processed for this window today
+                var lastSentSetting = await context.SystemSettings.FirstOrDefaultAsync(s => s.Key == key, stoppingToken);
                 if (lastSentSetting != null && lastSentSetting.Value == todayStr)
                 {
-                    _logger.LogDebug("Notification already sent today.");
                     return;
                 }
 
-                var today = DateOnly.FromDateTime(DateTime.Today);
+                var today = DateOnly.FromDateTime(turkeyTime);
+                
                 // Count words due for review today
                 var dueCount = await context.Words.CountAsync(w => 
                     w.IsLearned && 
                     w.NextReviewDate != null && 
-                    w.NextReviewDate.Value <= today);
+                    w.NextReviewDate.Value <= today, stoppingToken);
 
                 if (dueCount > 0)
                 {
-                    _logger.LogInformation("Found {Count} due words. Sending ntfy notification...", dueCount);
+                    _logger.LogInformation("Found {Count} due words in {Window} window. Sending ntfy notification...", dueCount, windowName);
 
                     using (var httpClient = new HttpClient())
                     {
@@ -111,20 +149,20 @@ namespace WordApp.Services
                         string message = $"Bugun tekrar etmeniz gereken {dueCount} adet kelime bulunmaktadir. Iyi calismalar!";
                         request.Content = new StringContent(message, Encoding.UTF8, "text/plain");
 
-                        var response = await httpClient.SendAsync(request);
+                        var response = await httpClient.SendAsync(request, stoppingToken);
                         if (response.IsSuccessStatusCode)
                         {
                             if (lastSentSetting == null)
                             {
-                                lastSentSetting = new SystemSetting { Key = "LastNotificationSentDate", Value = todayStr };
+                                lastSentSetting = new SystemSetting { Key = key, Value = todayStr };
                                 context.SystemSettings.Add(lastSentSetting);
                             }
                             else
                             {
                                 lastSentSetting.Value = todayStr;
                             }
-                            await context.SaveChangesAsync();
-                            _logger.LogInformation("Successfully sent review notification for today. Count: {Count}", dueCount);
+                            await context.SaveChangesAsync(stoppingToken);
+                            _logger.LogInformation("Successfully sent review notification for {Window}. Count: {Count}", windowName, dueCount);
                         }
                         else
                         {
@@ -134,7 +172,19 @@ namespace WordApp.Services
                 }
                 else
                 {
-                    _logger.LogDebug("No due words for today. Skipping notification.");
+                    _logger.LogInformation("No due words for today in {Window} window. Marking as checked.", windowName);
+                    
+                    // Mark as checked to prevent checking again during this window
+                    if (lastSentSetting == null)
+                    {
+                        lastSentSetting = new SystemSetting { Key = key, Value = todayStr };
+                        context.SystemSettings.Add(lastSentSetting);
+                    }
+                    else
+                    {
+                        lastSentSetting.Value = todayStr;
+                    }
+                    await context.SaveChangesAsync(stoppingToken);
                 }
             }
         }
