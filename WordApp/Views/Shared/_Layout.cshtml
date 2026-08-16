@@ -15,6 +15,12 @@
     <!-- Custom site CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/WordApp.styles.css" asp-append-version="true" />
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
 </head>
 <body>
     <header class="app-header">
@@ -24,6 +30,12 @@
                     <i class="bi bi-translate brand-icon"></i>
                     <span class="brand-text">WordApp</span>
                 </a>
+                
+                <div class="d-flex align-items-center order-lg-last ms-auto ms-lg-0 me-2 me-lg-0">
+                    <button id="theme-toggle" class="theme-switch-btn" title="Temayı Değiştir">
+                        <i class="bi bi-sun-fill"></i>
+                    </button>
+                </div>
                 
                 @if (User.Identity?.IsAuthenticated == true)
                 {

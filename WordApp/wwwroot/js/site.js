@@ -54,4 +54,28 @@ $(document).ready(function() {
             `)
             .appendTo("head");
     }
+
+    // Theme Switcher Logic
+    const $toggle = $('#theme-toggle');
+    if ($toggle.length) {
+        const $icon = $toggle.find('i');
+
+        function updateIcon(theme) {
+            if (theme === 'light') {
+                $icon.attr('class', 'bi bi-moon-stars-fill');
+            } else {
+                $icon.attr('class', 'bi bi-sun-fill');
+            }
+        }
+
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        updateIcon(currentTheme);
+
+        $toggle.click(function() {
+            const activeTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', activeTheme);
+            localStorage.setItem('theme', activeTheme);
+            updateIcon(activeTheme);
+        });
+    }
 });
