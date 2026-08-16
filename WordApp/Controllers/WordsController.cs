@@ -37,6 +37,17 @@ namespace WordApp.Controllers
             return View();
         }
 
+        // GET: Words/Details/5
+        public async Task<IActionResult> Details(int? id)
+        {
+            if (id == null) return NotFound();
+
+            var wordItem = await _context.Words.FindAsync(id);
+            if (wordItem == null) return NotFound();
+
+            return View(wordItem);
+        }
+
         // GET: Words/GetWords (AJAX dynamic listing — paginated)
         [HttpGet]
         public async Task<IActionResult> GetWords(
@@ -214,6 +225,24 @@ namespace WordApp.Controllers
             await _context.SaveChangesAsync();
 
             return Json(new { success = true, nextReviewDate = wordItem.NextReviewDate?.ToString("yyyy-MM-dd") });
+        }
+
+        // POST: Words/Unlearn/5
+        [HttpPost]
+        public async Task<IActionResult> Unlearn(int id)
+        {
+            var wordItem = await _context.Words.FindAsync(id);
+            if (wordItem == null) return Json(new { success = false, message = "Kelime bulunamadı." });
+
+            wordItem.IsLearned = false;
+            wordItem.IntervalDays = 0;
+            wordItem.NextReviewDate = null;
+            wordItem.LastReviewedAt = null;
+
+            _context.Update(wordItem);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
         }
 
         // POST: Words/SubmitReview

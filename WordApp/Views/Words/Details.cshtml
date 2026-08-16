@@ -1,0 +1,228 @@
+@model WordApp.Models.WordItem
+@using WordApp.Models
+
+@{
+    ViewData["Title"] = Model.Word + " - Kelime Detayları";
+}
+
+<div class="details-container">
+    <!-- Back to Dashboard Link -->
+    <div class="mb-4">
+        <a asp-action="Index" class="btn-secondary-custom btn-sm-custom px-3">
+            <i class="bi bi-arrow-left"></i> Panel Geri Dön
+        </a>
+    </div>
+
+    <!-- Word Main Header Card -->
+    <div class="details-header-card mb-4">
+        <div class="row align-items-center g-3">
+            <div class="col-md-8">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <h1 class="details-word-title m-0">@Model.Word</h1>
+                    <div class="d-flex gap-2">
+                        <span class="badge-custom badge-level @Model.Level.ToString().ToLower()">@Model.Level</span>
+                        <span class="badge-custom badge-type">@TranslateType(Model.Type)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="d-flex justify-content-start justify-content-md-end gap-2">
+                    @if (!string.IsNullOrEmpty(Model.UkMp3))
+                    {
+                        <button type="button" class="btn-audio btn-indigo px-3 py-2 rounded-3 gap-2" onclick="playWordAudio(this, '@Model.UkMp3')">
+                            <i class="bi bi-volume-up-fill"></i> UK
+                        </button>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.UsMp3))
+                    {
+                        <button type="button" class="btn-audio btn-indigo px-3 py-2 rounded-3 gap-2" onclick="playWordAudio(this, '@Model.UsMp3')">
+                            <i class="bi bi-volume-up-fill"></i> US
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Grid Content -->
+    <div class="row g-4">
+        <!-- Notes & Examples Section -->
+        <div class="col-lg-8 col-md-12">
+            <div class="details-card h-100">
+                <div class="details-card-header">
+                    <i class="bi bi-journal-text text-primary fs-5"></i>
+                    <h3 class="details-card-title">Notlar ve Örnek Cümleler</h3>
+                </div>
+                <div class="details-card-body p-4 notes-full-content">
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        @Html.Raw(Model.Notes)
+                    }
+                    else
+                    {
+                        <p class="text-muted italic">Bu kelime için henüz bir çalışma notu veya örnek cümle eklenmemiş.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- SRS & Stats Section -->
+        <div class="col-lg-4 col-md-12">
+            <div class="details-card h-100">
+                <div class="details-card-header">
+                    <i class="bi bi-speedometer2 text-warning fs-5"></i>
+                    <h3 class="details-card-title">SRS Öğrenme Durumu</h3>
+                </div>
+                <div class="details-card-body p-4">
+                    <div class="srs-status-box mb-4">
+                        @if (Model.IsLearned)
+                        {
+                            <div class="srs-status-badge learned">
+                                <i class="bi bi-check-circle-fill"></i> Öğrenildi
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="srs-status-badge unlearned">
+                                <i class="bi bi-x-circle-fill"></i> Öğrenilmedi
+                            </div>
+                        }
+                    </div>
+
+                    <div class="srs-stat-list">
+                        <div class="srs-stat-item">
+                            <span class="stat-label">Tekrar Aralığı</span>
+                            <span class="stat-value">@(Model.IsLearned ? $"{Model.IntervalDays} Gün" : "—")</span>
+                        </div>
+                        <div class="srs-stat-item">
+                            <span class="stat-label">Sonraki Tekrar Tarihi</span>
+                            <span class="stat-value">@(Model.IsLearned && Model.NextReviewDate.HasValue ? Model.NextReviewDate.Value.ToString("dd MMMM yyyy") : "—")</span>
+                        </div>
+                        <div class="srs-stat-item">
+                            <span class="stat-label">Son İnceleme Zamanı</span>
+                            <span class="stat-value">@(Model.LastReviewedAt.HasValue ? Model.LastReviewedAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm") : "Yapılmadı")</span>
+                        </div>
+                        <div class="srs-stat-item">
+                            <span class="stat-label">Kelime Oluşturulma</span>
+                            <span class="stat-value">@Model.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Quick Actions inside SRS panel -->
+                    <div class="mt-4 pt-3 border-top border-secondary border-opacity-10 d-grid gap-2">
+                        @if (Model.IsLearned)
+                        {
+                            <button type="button" class="btn btn-warning w-100 py-2 d-flex align-items-center justify-content-center gap-2" id="btn-details-unlearn">
+                                <i class="bi bi-arrow-counterclockwise"></i> Öğrenilmedi Yap
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-success w-100 py-2 d-flex align-items-center justify-content-center gap-2" id="btn-details-learn">
+                                <i class="bi bi-check-lg"></i> Öğrendim Yap
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Footer Toolbar -->
+    <div class="details-actions-bar mt-4">
+        <div class="d-flex justify-content-between flex-wrap gap-3">
+            <div>
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-indigo px-4 py-2">
+                    <i class="bi bi-pencil"></i> Düzenle
+                </a>
+            </div>
+            <div>
+                <button type="button" class="btn btn-danger px-4 py-2 d-inline-flex align-items-center gap-2" id="btn-details-delete">
+                    <i class="bi bi-trash"></i> Sil
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string TranslateType(WordType type)
+    {
+        return type switch
+        {
+            WordType.Adverb => "Zarf",
+            WordType.AuxiliaryVerb => "Yardımcı Fiil",
+            WordType.Conjunction => "Bağlaç",
+            WordType.DefiniteArticle => "Definite Article (the)",
+            WordType.Determiner => "Belirteç (Determiner)",
+            WordType.Exclamation => "Ünlem",
+            WordType.IndefiniteArticle => "Indefinite Article (a/an)",
+            WordType.InfinitiveMarker => "Mastar Eki (to)",
+            WordType.LinkingVerb => "Bağlama Fiili",
+            WordType.ModalVerb => "Modal Fiili",
+            WordType.Noun => "İsim",
+            WordType.Number => "Sayı",
+            WordType.OrdinalNumber => "Sıra Sayısı",
+            WordType.Preposition => "Edat",
+            WordType.Pronoun => "Zamir",
+            WordType.Verb => "Fiil",
+            WordType.Adjective => "Sıfat",
+            _ => type.ToString()
+        };
+    }
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            const wordId = @Model.Id;
+            const wordName = "@Html.Raw(Model.Word.Replace("\"", "\\\""))";
+
+            // Mark as learned handler
+            $("#btn-details-learn").click(function () {
+                const $btn = $(this);
+                $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> İşleniyor...');
+                $.post("/Words/MarkAsLearned", { id: wordId }, function (res) {
+                    if (res.success) {
+                        location.reload();
+                    } else {
+                        alert(res.message || "İşlem başarısız oldu.");
+                        $btn.prop("disabled", false).html('<i class="bi bi-check-lg"></i> Öğrendim Yap');
+                    }
+                });
+            });
+
+            // Revert learning handler
+            $("#btn-details-unlearn").click(function () {
+                if (confirm(`"${wordName}" kelimesini öğrenilmeyenlere geri taşımak istediğinize emin misiniz?\nVarsa yaklaşan tüm tekrarlar iptal edilecektir.`)) {
+                    const $btn = $(this);
+                    $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> İşleniyor...');
+                    $.post("/Words/Unlearn", { id: wordId }, function (res) {
+                        if (res.success) {
+                            location.reload();
+                        } else {
+                            alert(res.message || "İşlem başarısız oldu.");
+                            $btn.prop("disabled", false).html('<i class="bi bi-arrow-counterclockwise"></i> Öğrenilmedi Yap');
+                        }
+                    });
+                }
+            });
+
+            // Delete word handler
+            $("#btn-details-delete").click(function () {
+                if (confirm(`"${wordName}" kelimesini tamamen silmek istediğinize emin misiniz?`)) {
+                    const $btn = $(this);
+                    $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Siliniyor...');
+                    $.post("/Words/Delete", { id: wordId }, function (res) {
+                        if (res.success) {
+                            window.location.href = "/Words/Index";
+                        } else {
+                            alert(res.message || "Kelime silinemedi.");
+                            $btn.prop("disabled", false).html('<i class="bi bi-trash"></i> Sil');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}
