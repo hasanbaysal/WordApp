@@ -53,7 +53,7 @@ namespace WordApp.Controllers
         public async Task<IActionResult> GetWords(
             string? search, WordType? type, WordLevel? level,
             bool? isLearned, bool? dueOnly,
-            int page = 1, int pageSize = 100)
+            int page = 1, int pageSize = 100, bool random = false)
         {
             var query = _context.Words.AsQueryable();
 
@@ -80,8 +80,13 @@ namespace WordApp.Controllers
 
             var totalCount = await query.CountAsync();
 
-            var words = await query
-                .OrderBy(w => w.Word)
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            if (random) { page = 1; pageSize = 1; }
+            var orderedQuery = random
+                ? query.OrderBy(w => EF.Functions.Random())
+                : query.OrderBy(w => w.Word);
+            var words = await orderedQuery
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -106,7 +111,7 @@ namespace WordApp.Controllers
             return Json(new
             {
                 items = result,
-                hasMore = (page * pageSize) < totalCount,
+                hasMore = !random && (page * pageSize) < totalCount,
                 totalCount
             });
         }
@@ -247,21 +252,20 @@ namespace WordApp.Controllers
 
         // POST: Words/SubmitReview
         [HttpPost]
-        public async Task<IActionResult> SubmitReview(int id, int score)
+        public async Task<IActionResult> SubmitReview(int id, int? score, int? days)
         {
-            if (score < 1 || score > 10)
+            if (!ModelState.IsValid || (days.HasValue ? days < 1 || days > 3650 : !score.HasValue || score < 1 || score > 10))
             {
-                return Json(new { success = false, message = "Geçersiz puan. Puan 1 ile 10 arasında olmalıdır." });
+                return Json(new { success = false, message = "Puan 1–10, tekrar günü 1–3650 arasında tam sayı olmalıdır." });
             }
 
             var wordItem = await _context.Words.FindAsync(id);
             if (wordItem == null) return Json(new { success = false, message = "Kelime bulunamadı." });
 
-            // Calculate next review interval in days:
-            // Linear mapping: Score 1 -> 1 day, Score 10 -> 15 days.
-            // Formula: 1 + (score - 1) * (14.0 / 9.0)
-            double calculatedInterval = 1.0 + (score - 1) * (14.0 / 9.0);
-            int newInterval = (int)Math.Clamp(Math.Round(calculatedInterval), 1, 15);
+            if (!wordItem.IsLearned || wordItem.NextReviewDate == null)
+                return Json(new { success = false, message = "Önce kelimeyi öğrenildi olarak işaretleyin ve tekrarı açın." });
+
+            int newInterval = days ?? ReviewSchedule.DaysForScore(score!.Value);
 
             wordItem.IntervalDays = newInterval;
             wordItem.NextReviewDate = DateOnly.FromDateTime(DateTime.Today.AddDays(newInterval));
@@ -277,6 +281,27 @@ namespace WordApp.Controllers
             });
         }
 
+
+        [HttpPost]
+        public async Task<IActionResult> ToggleReview(int id)
+        {
+            var word = await _context.Words.FindAsync(id);
+            if (word == null || !word.IsLearned)
+                return Json(new { success = false, message = "Öğrenilmiş kelime bulunamadı." });
+
+            if (word.NextReviewDate.HasValue)
+            {
+                word.NextReviewDate = null;
+                word.IntervalDays = 0;
+            }
+            else
+            {
+                word.IntervalDays = 1;
+                word.NextReviewDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
+            }
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
+        }
 
         private bool WordItemExists(int id)
         {

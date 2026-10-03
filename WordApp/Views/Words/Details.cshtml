@@ -92,7 +92,7 @@
                     <div class="srs-stat-list">
                         <div class="srs-stat-item">
                             <span class="stat-label">Tekrar Aralığı</span>
-                            <span class="stat-value">@(Model.IsLearned ? $"{Model.IntervalDays} Gün" : "—")</span>
+                            <span class="stat-value">@(Model.IsLearned ? (Model.NextReviewDate.HasValue ? $"{Model.IntervalDays} Gün" : "Tekrar kapalı") : "—")</span>
                         </div>
                         <div class="srs-stat-item">
                             <span class="stat-label">Sonraki Tekrar Tarihi</span>
@@ -112,6 +112,9 @@
                     <div class="mt-4 pt-3 border-top border-secondary border-opacity-10 d-grid gap-2">
                         @if (Model.IsLearned)
                         {
+                            <button type="button" class="btn btn-secondary-custom w-100 py-2" id="btn-details-toggle-review">
+                                @(Model.NextReviewDate.HasValue ? "Tekrarı Kapat" : "Tekrarı Aç")
+                            </button>
                             <button type="button" class="btn btn-warning w-100 py-2 d-flex align-items-center justify-content-center gap-2" id="btn-details-unlearn">
                                 <i class="bi bi-arrow-counterclockwise"></i> Öğrenilmedi Yap
                             </button>
@@ -176,6 +179,15 @@
     <script>
         $(document).ready(function () {
             const wordId = @Model.Id;
+            $("#btn-details-toggle-review").click(function () {
+                const $btn = $(this).prop("disabled", true);
+                $.post("/Words/ToggleReview", { id: wordId })
+                    .done(function (res) {
+                        if (res.success) location.reload();
+                        else alert(res.message);
+                    }).fail(() => alert("Tekrar durumu kaydedilemedi."))
+                    .always(() => $btn.prop("disabled", false));
+            });
             const wordName = "@Html.Raw(Model.Word.Replace("\"", "\\\""))";
 
             // Mark as learned handler
