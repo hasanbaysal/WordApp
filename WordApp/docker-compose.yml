@@ -14,8 +14,9 @@ services:
       - YandexSmtpSettings__Port=587
       - YandexSmtpSettings__Username=${YANDEX_USERNAME}
       - YandexSmtpSettings__Password=${YANDEX_PASSWORD}
-      - NtfySettings__TopicUrl=${NTFY_TOPIC_URL}
-      - NtfySettings__Enabled=true
+      - TelegramSettings__BotToken=${TELEGRAM_BOT_TOKEN}
+      - TelegramSettings__ChatId=${TELEGRAM_CHAT_ID}
+      - TelegramSettings__Enabled=true
       - ASPNETCORE_ENVIRONMENT=Production
     ports:
       - "127.0.0.1:5000:5000"

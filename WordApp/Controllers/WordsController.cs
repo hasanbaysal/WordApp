@@ -216,20 +216,33 @@ namespace WordApp.Controllers
 
         // POST: Words/MarkAsLearned/5
         [HttpPost]
-        public async Task<IActionResult> MarkAsLearned(int id)
+        public async Task<IActionResult> MarkAsLearned(int id, bool enableReview = true)
         {
             var wordItem = await _context.Words.FindAsync(id);
             if (wordItem == null) return Json(new { success = false, message = "Kelime bulunamadı." });
 
             wordItem.IsLearned = true;
-            wordItem.IntervalDays = 1; // Start with 1 day review cycle
-            wordItem.NextReviewDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
+            if (enableReview)
+            {
+                wordItem.IntervalDays = 1; // Start with 1 day review cycle
+                wordItem.NextReviewDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
+            }
+            else
+            {
+                wordItem.IntervalDays = 0;
+                wordItem.NextReviewDate = null;
+            }
             wordItem.LastReviewedAt = null;
 
             _context.Update(wordItem);
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true, nextReviewDate = wordItem.NextReviewDate?.ToString("yyyy-MM-dd") });
+            return Json(new
+            {
+                success = true,
+                enableReview,
+                nextReviewDate = wordItem.NextReviewDate?.ToString("yyyy-MM-dd")
+            });
         }
 
         // POST: Words/Unlearn/5
@@ -281,7 +294,6 @@ namespace WordApp.Controllers
             });
         }
 
-
         [HttpPost]
         public async Task<IActionResult> ToggleReview(int id)
         {
@@ -300,7 +312,12 @@ namespace WordApp.Controllers
                 word.NextReviewDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
             }
             await _context.SaveChangesAsync();
-            return Json(new { success = true });
+            return Json(new
+            {
+                success = true,
+                reviewEnabled = word.NextReviewDate.HasValue,
+                nextReviewDate = word.NextReviewDate?.ToString("yyyy-MM-dd")
+            });
         }
 
         private bool WordItemExists(int id)

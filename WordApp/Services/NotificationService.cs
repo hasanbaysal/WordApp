@@ -1,6 +1,7 @@
 using System;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -110,13 +111,14 @@ namespace WordApp.Services
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 
-                var ntfySettings = configuration.GetSection("NtfySettings");
-                var enabled = ntfySettings.GetValue<bool>("Enabled");
-                var topicUrl = ntfySettings.GetValue<string>("TopicUrl");
+                var telegramSettings = configuration.GetSection("TelegramSettings");
+                var enabled = telegramSettings.GetValue<bool>("Enabled");
+                var botToken = telegramSettings.GetValue<string>("BotToken");
+                var chatId = telegramSettings.GetValue<string>("ChatId");
 
-                if (!enabled || string.IsNullOrEmpty(topicUrl))
+                if (!enabled || string.IsNullOrWhiteSpace(botToken) || string.IsNullOrWhiteSpace(chatId))
                 {
-                    _logger.LogDebug("Notification Service disabled or TopicUrl not configured.");
+                    _logger.LogDebug("Telegram Notification Service disabled or BotToken/ChatId not configured.");
                     return;
                 }
 
@@ -137,19 +139,22 @@ namespace WordApp.Services
 
                 if (dueCount > 0)
                 {
-                    _logger.LogInformation("Found {Count} due words in {Window} window. Sending ntfy notification...", dueCount, windowName);
+                    _logger.LogInformation("Found {Count} due words in {Window} window. Sending Telegram notification...", dueCount, windowName);
 
                     using (var httpClient = new HttpClient())
                     {
-                        var request = new HttpRequestMessage(HttpMethod.Post, topicUrl);
-                        request.Headers.Add("Title", "WordApp Review Reminder");
-                        request.Headers.Add("Priority", "3");
-                        request.Headers.Add("Tags", "books,memo,brain");
-                        
-                        string message = $"Bugun tekrar etmeniz gereken {dueCount} adet kelime bulunmaktadir. Iyi calismalar!";
-                        request.Content = new StringContent(message, Encoding.UTF8, "text/plain");
+                        var telegramUrl = $"https://api.telegram.org/bot{botToken}/sendMessage";
+                        string message = $"📚 WordApp Tekrar Hatırlatıcı\n\nBugün tekrar etmeniz gereken {dueCount} adet kelime bulunmaktadır. İyi çalışmalar!";
 
-                        var response = await httpClient.SendAsync(request, stoppingToken);
+                        var payload = JsonSerializer.Serialize(new
+                        {
+                            chat_id = chatId,
+                            text = message
+                        });
+
+                        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                        var response = await httpClient.PostAsync(telegramUrl, content, stoppingToken);
+
                         if (response.IsSuccessStatusCode)
                         {
                             if (lastSentSetting == null)
@@ -162,11 +167,12 @@ namespace WordApp.Services
                                 lastSentSetting.Value = todayStr;
                             }
                             await context.SaveChangesAsync(stoppingToken);
-                            _logger.LogInformation("Successfully sent review notification for {Window}. Count: {Count}", windowName, dueCount);
+                            _logger.LogInformation("Successfully sent Telegram review notification for {Window}. Count: {Count}", windowName, dueCount);
                         }
                         else
                         {
-                            _logger.LogError("Failed to send ntfy notification. Status: {Status}", response.StatusCode);
+                            var errorBody = await response.Content.ReadAsStringAsync(stoppingToken);
+                            _logger.LogError("Failed to send Telegram notification. Status: {Status}, Response: {Response}", response.StatusCode, errorBody);
                         }
                     }
                 }

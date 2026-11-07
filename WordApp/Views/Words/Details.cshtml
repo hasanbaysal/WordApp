@@ -78,7 +78,7 @@
                         @if (Model.IsLearned)
                         {
                             <div class="srs-status-badge learned">
-                                <i class="bi bi-check-circle-fill"></i> Öğrenildi
+                                <i class="bi bi-check-circle-fill"></i> @(Model.NextReviewDate.HasValue ? "Öğrenildi (Tekrar Açık)" : "Öğrenildi (Tekrar Kapalı)")
                             </div>
                         }
                         else
@@ -112,8 +112,9 @@
                     <div class="mt-4 pt-3 border-top border-secondary border-opacity-10 d-grid gap-2">
                         @if (Model.IsLearned)
                         {
-                            <button type="button" class="btn btn-secondary-custom w-100 py-2" id="btn-details-toggle-review">
-                                @(Model.NextReviewDate.HasValue ? "Tekrarı Kapat" : "Tekrarı Aç")
+                            <button type="button" class="btn btn-secondary-custom w-100 py-2 d-flex align-items-center justify-content-center gap-2" id="btn-details-toggle-review">
+                                <i class="bi @(Model.NextReviewDate.HasValue ? "bi-slash-circle" : "bi-arrow-repeat")"></i>
+                                <span>@(Model.NextReviewDate.HasValue ? "Tekrarı Kapat" : "Tekrarı Aç")</span>
                             </button>
                             <button type="button" class="btn btn-warning w-100 py-2 d-flex align-items-center justify-content-center gap-2" id="btn-details-unlearn">
                                 <i class="bi bi-arrow-counterclockwise"></i> Öğrenilmedi Yap
@@ -143,6 +144,40 @@
                 <button type="button" class="btn btn-danger px-4 py-2 d-inline-flex align-items-center gap-2" id="btn-details-delete">
                     <i class="bi bi-trash"></i> Sil
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- First-Time Learn Review Option Modal -->
+<div class="modal fade" id="detailsLearnModal" tabindex="-1" aria-labelledby="detailsLearnModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-custom-content">
+            <div class="modal-header modal-custom-header">
+                <h5 class="modal-title modal-custom-title" id="detailsLearnModalLabel">
+                    <i class="bi bi-check-circle text-success me-2"></i>Kelimeyi Öğrendim Olarak İşaretle
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <h4 class="fw-bold mb-2">@Model.Word</h4>
+                <p class="text-muted mb-4">
+                    Bu kelimeyi ilk kez öğrenirken aralıklı tekrar (SRS) özelliği <strong>açık mı olsun, kapalı mı olsun?</strong>
+                </p>
+                <div class="d-grid gap-3">
+                    <button type="button" id="btn-details-learn-review-on" class="btn-indigo w-100 py-2 d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-arrow-repeat"></i>
+                        <span>Tekrar Açık Olsun (1 Gün Sonra Hatırlat)</span>
+                    </button>
+                    <button type="button" id="btn-details-learn-review-off" class="btn btn-secondary-custom w-100 py-2 d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-slash-circle"></i>
+                        <span>Tekrar Kapalı Olsun</span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer modal-custom-footer justify-content-between">
+                <span class="text-muted small">Tekrar tercihini daha sonra istediğiniz zaman açıp kapatabilirsiniz.</span>
+                <button type="button" class="btn btn-secondary-custom btn-sm-custom" data-bs-dismiss="modal">İptal</button>
             </div>
         </div>
     </div>
@@ -179,6 +214,8 @@
     <script>
         $(document).ready(function () {
             const wordId = @Model.Id;
+            const wordName = "@Html.Raw(Model.Word.Replace("\"", "\\\""))";
+
             $("#btn-details-toggle-review").click(function () {
                 const $btn = $(this).prop("disabled", true);
                 $.post("/Words/ToggleReview", { id: wordId })
@@ -188,20 +225,33 @@
                     }).fail(() => alert("Tekrar durumu kaydedilemedi."))
                     .always(() => $btn.prop("disabled", false));
             });
-            const wordName = "@Html.Raw(Model.Word.Replace("\"", "\\\""))";
 
-            // Mark as learned handler
+            // Open modal when marking as learned for the first time
             $("#btn-details-learn").click(function () {
-                const $btn = $(this);
-                $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> İşleniyor...');
-                $.post("/Words/MarkAsLearned", { id: wordId }, function (res) {
+                new bootstrap.Modal(document.getElementById('detailsLearnModal')).show();
+            });
+
+            function submitDetailsLearn(enableReview) {
+                const $btns = $("#btn-details-learn-review-on, #btn-details-learn-review-off").prop("disabled", true);
+                $.post("/Words/MarkAsLearned", { id: wordId, enableReview: enableReview }, function (res) {
                     if (res.success) {
                         location.reload();
                     } else {
                         alert(res.message || "İşlem başarısız oldu.");
-                        $btn.prop("disabled", false).html('<i class="bi bi-check-lg"></i> Öğrendim Yap');
+                        $btns.prop("disabled", false);
                     }
+                }).fail(function () {
+                    alert("İşlem kaydedilemedi.");
+                    $btns.prop("disabled", false);
                 });
+            }
+
+            $("#btn-details-learn-review-on").click(function () {
+                submitDetailsLearn(true);
+            });
+
+            $("#btn-details-learn-review-off").click(function () {
+                submitDetailsLearn(false);
             });
 
             // Revert learning handler
