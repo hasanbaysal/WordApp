@@ -11,6 +11,7 @@ namespace WordApp.Data
         }
 
         public DbSet<WordItem> Words { get; set; }
+        public DbSet<Story> Stories { get; set; }
         public DbSet<SystemSetting> SystemSettings { get; set; }
         public DbSet<User> Users { get; set; }
 

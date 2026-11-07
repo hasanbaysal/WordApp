@@ -1,0 +1,236 @@
+@model WordApp.Models.Story
+@using WordApp.Models
+
+@{
+    ViewData["Title"] = Model.Title + " - Seviyeli Hikaye";
+}
+
+<div class="details-container">
+    <!-- Top Navigation Bar -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <a asp-action="Index" class="btn-secondary-custom btn-sm-custom px-3">
+            <i class="bi bi-arrow-left"></i> Seviyeli Hikayelere Dön
+        </a>
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-indigo btn-sm-custom px-3">
+                <i class="bi bi-pencil"></i> Düzenle
+            </a>
+            <button type="button" class="btn btn-danger btn-sm-custom px-3 d-inline-flex align-items-center gap-1" id="btn-story-delete">
+                <i class="bi bi-trash"></i> Sil
+            </button>
+        </div>
+    </div>
+
+    <!-- Story Header Card -->
+    <div class="details-header-card mb-4">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <span class="badge-custom badge-level @Model.Level.ToString().ToLower()">@Model.Level Seviye</span>
+            <span class="badge-custom badge-type">
+                <i class="bi bi-calendar3 me-1"></i> @Model.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+            </span>
+            <span class="badge-custom badge-type" id="story-word-count-badge">
+                <i class="bi bi-file-text me-1"></i> <span id="story-word-count">0</span> kelime
+            </span>
+            <span class="badge-custom badge-type" id="story-read-time-badge">
+                <i class="bi bi-clock me-1"></i> ~<span id="story-read-time">1</span> dk okuma
+            </span>
+        </div>
+
+        <h1 class="details-word-title mb-3">@Model.Title</h1>
+
+        <!-- Audio / TTS & Reading Controls Bar -->
+        <div class="story-reader-toolbar pt-3 border-top border-secondary border-opacity-10 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <!-- TTS Controls -->
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <button type="button" id="btn-story-speak" class="btn-tts-play py-2 px-3">
+                    <i class="bi bi-play-fill"></i>
+                    <span>Sesli Dinle</span>
+                </button>
+                <button type="button" id="btn-story-pause" class="btn-tts-secondary" title="Duraklat" style="display:none;">
+                    <i class="bi bi-pause-fill"></i>
+                </button>
+                <button type="button" id="btn-story-stop" class="btn-tts-secondary" title="Durdur" style="display:none;">
+                    <i class="bi bi-stop-fill"></i>
+                </button>
+                <select id="story-tts-voice" class="form-select filter-control tts-select py-1" style="max-width:220px;">
+                    <option value="">Ses Yükleniyor...</option>
+                </select>
+                <div class="d-flex align-items-center gap-1 ms-1">
+                    <input type="range" id="story-tts-rate" class="tts-range" style="width:80px;" min="0.5" max="1.5" step="0.1" value="0.9" />
+                    <span class="tts-range-value small" id="story-tts-rate-val">0.9x</span>
+                </div>
+            </div>
+
+            <!-- Font Size & Display Mode Controls -->
+            <div class="d-flex align-items-center gap-2">
+                <div class="editor-view-tabs">
+                    <button type="button" class="editor-tab-btn active" id="btn-mode-formatted" title="Markdown ve Paragraf Görünümü">
+                        <i class="bi bi-markdown"></i> Zengin Metin
+                    </button>
+                    <button type="button" class="editor-tab-btn" id="btn-mode-plain" title="Ham Düz Metin Görünümü">
+                        <i class="bi bi-card-text"></i> Düz Metin
+                    </button>
+                </div>
+                <div class="font-size-controls d-flex align-items-center gap-1">
+                    <button type="button" class="btn btn-secondary-custom btn-sm-custom py-1 px-2" id="font-decrease" title="Yazıyı Küçült">A-</button>
+                    <button type="button" class="btn btn-secondary-custom btn-sm-custom py-1 px-2" id="font-reset" title="Varsayılan Boyut">A</button>
+                    <button type="button" class="btn btn-secondary-custom btn-sm-custom py-1 px-2" id="font-increase" title="Yazıyı Büyüt">A+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Story Content Card -->
+    <div class="details-card mb-4">
+        <div class="details-card-body p-4 p-md-5">
+            <!-- Hidden raw source for safe JS rendering -->
+            <textarea id="raw-story-source" style="display:none;">@Model.Content</textarea>
+
+            <!-- Formatted Markdown / Plain Text output -->
+            <div id="story-rendered-view" class="story-markdown-body story-reading-area"></div>
+
+            <!-- Raw Plain Text output (optional toggle) -->
+            <pre id="story-plain-view" class="story-plain-area" style="display:none;"></pre>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            const storyId = @Model.Id;
+            const storyTitle = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Title));
+            const rawContent = $("#raw-story-source").val() || "";
+
+            // Render Markdown / Plain text
+            const renderedHtml = renderStoryContent(rawContent);
+            $("#story-rendered-view").html(renderedHtml);
+            $("#story-plain-view").text(rawContent);
+
+            // Calculate word count & reading time
+            const plainText = extractPlainTextFromStory(rawContent);
+            const wordCount = plainText.split(/\s+/).filter(Boolean).length;
+            const readTime = Math.max(1, Math.ceil(wordCount / 160));
+            $("#story-word-count").text(wordCount);
+            $("#story-read-time").text(readTime);
+
+            // Toggle Formatted vs Plain view
+            $("#btn-mode-formatted").click(function () {
+                $(this).addClass("active");
+                $("#btn-mode-plain").removeClass("active");
+                $("#story-plain-view").hide();
+                $("#story-rendered-view").show();
+            });
+
+            $("#btn-mode-plain").click(function () {
+                $(this).addClass("active");
+                $("#btn-mode-formatted").removeClass("active");
+                $("#story-rendered-view").hide();
+                $("#story-plain-view").show();
+            });
+
+            // Font size controls
+            let currentFontSize = 1.1;
+            function applyFontSize() {
+                $("#story-rendered-view, #story-plain-view").css("font-size", currentFontSize + "rem");
+            }
+            $("#font-decrease").click(function () {
+                currentFontSize = Math.max(0.85, +(currentFontSize - 0.1).toFixed(2));
+                applyFontSize();
+            });
+            $("#font-reset").click(function () {
+                currentFontSize = 1.1;
+                applyFontSize();
+            });
+            $("#font-increase").click(function () {
+                currentFontSize = Math.min(1.6, +(currentFontSize + 0.1).toFixed(2));
+                applyFontSize();
+            });
+
+            // TTS for Story
+            let ttsVoices = [];
+            function loadVoices() {
+                ttsVoices = speechSynthesis.getVoices();
+                const $select = $("#story-tts-voice").empty();
+                const enVoices = ttsVoices.filter(v => v.lang.startsWith("en"));
+                const otherVoices = ttsVoices.filter(v => !v.lang.startsWith("en"));
+
+                if (enVoices.length) {
+                    $select.append('<optgroup label="İngilizce Sesler">');
+                    enVoices.forEach((v, i) => $select.append(`<option value="${ttsVoices.indexOf(v)}" ${i === 0 ? 'selected' : ''}>${v.name} (${v.lang})</option>`));
+                    $select.append('</optgroup>');
+                }
+                if (otherVoices.length) {
+                    $select.append('<optgroup label="Diğer Sesler">');
+                    otherVoices.forEach(v => $select.append(`<option value="${ttsVoices.indexOf(v)}">${v.name} (${v.lang})</option>`));
+                    $select.append('</optgroup>');
+                }
+                if (!ttsVoices.length) $select.append('<option value="">Varsayılan Ses</option>');
+            }
+            if (speechSynthesis.getVoices().length) loadVoices();
+            speechSynthesis.onvoiceschanged = loadVoices;
+
+            $("#story-tts-rate").on("input", function () {
+                $("#story-tts-rate-val").text($(this).val() + "x");
+            });
+
+            function resetTTS() {
+                $("#btn-story-speak").removeClass("tts-speaking").find("span").text("Sesli Dinle");
+                $("#btn-story-speak i").attr("class", "bi bi-play-fill");
+                $("#btn-story-pause, #btn-story-stop").hide();
+            }
+
+            $("#btn-story-speak").click(function () {
+                if (!plainText) return;
+                speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(plainText);
+                const voiceIdx = $("#story-tts-voice").val();
+                if (voiceIdx !== "" && ttsVoices[voiceIdx]) utterance.voice = ttsVoices[voiceIdx];
+                utterance.rate = parseFloat($("#story-tts-rate").val());
+                utterance.lang = "en-US";
+                utterance.onstart = () => {
+                    $("#btn-story-speak").addClass("tts-speaking").find("span").text("Okunuyor...");
+                    $("#btn-story-speak i").attr("class", "bi bi-soundwave");
+                    $("#btn-story-pause, #btn-story-stop").show();
+                };
+                utterance.onend = resetTTS;
+                utterance.onerror = resetTTS;
+                speechSynthesis.speak(utterance);
+            });
+
+            $("#btn-story-pause").click(function () {
+                if (speechSynthesis.paused) {
+                    speechSynthesis.resume();
+                    $(this).find("i").attr("class", "bi bi-pause-fill");
+                } else {
+                    speechSynthesis.pause();
+                    $(this).find("i").attr("class", "bi bi-play-fill");
+                }
+            });
+
+            $("#btn-story-stop").click(function () {
+                speechSynthesis.cancel();
+                resetTTS();
+            });
+
+            $(window).on("beforeunload", function () {
+                speechSynthesis.cancel();
+            });
+
+            // Delete Story
+            $("#btn-story-delete").click(function () {
+                if (confirm(`"${storyTitle}" başlıklı hikayeyi silmek istediğinize emin misiniz?`)) {
+                    const $btn = $(this).prop("disabled", true);
+                    $.post("/Stories/Delete", { id: storyId }, function (res) {
+                        if (res.success) {
+                            window.location.href = "/Stories/Index";
+                        } else {
+                            alert(res.message || "Hikaye silinemedi.");
+                            $btn.prop("disabled", false);
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

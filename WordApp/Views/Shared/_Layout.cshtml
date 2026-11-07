@@ -55,6 +55,11 @@
                                     <i class="bi bi-plus-circle-fill me-1"></i> Yeni Kelime
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link px-3 py-2 rounded-3 @(ViewContext.RouteData.Values["controller"]?.ToString() == "Stories" ? "active" : "")" asp-controller="Stories" asp-action="Index">
+                                    <i class="bi bi-book-half me-1"></i> Seviyeli Hikayeler
+                                </a>
+                            </li>
                         </ul>
                         <div class="d-flex align-items-center gap-3">
                             <span class="user-badge d-none d-md-flex align-items-center gap-2">
@@ -98,6 +103,8 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

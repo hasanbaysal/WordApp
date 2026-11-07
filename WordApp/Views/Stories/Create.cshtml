@@ -1,0 +1,154 @@
+@model WordApp.Models.Story
+@using WordApp.Models
+
+@{
+    ViewData["Title"] = "Yeni Hikaye Ekle";
+}
+
+<div class="form-panel story-form-panel">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <h2 class="form-title m-0"><i class="bi bi-journal-plus text-primary"></i> Yeni Hikaye Ekle</h2>
+        <a asp-action="Index" class="btn btn-secondary-custom btn-sm-custom">
+            <i class="bi bi-arrow-left"></i> Hikayelere Dön
+        </a>
+    </div>
+
+    <form asp-action="Create" id="storyForm" method="post">
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger border-0 rounded-3 bg-danger bg-opacity-10 text-danger p-3 mb-4" role="alert">
+                Lütfen formdaki zorunlu alanları kontrol edin.
+            </div>
+        }
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-8">
+                <label asp-for="Title" class="form-label text-muted fw-500">Hikaye Başlığı</label>
+                <input asp-for="Title" class="form-control filter-control w-100" placeholder="Örn: The Mysterious Island" required />
+                <span asp-validation-for="Title" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Level" class="form-label text-muted fw-500">Seviye</label>
+                <select asp-for="Level" class="form-select filter-control w-100" required>
+                    @foreach (var level in Enum.GetValues<WordLevel>())
+                    {
+                        <option value="@level">@level</option>
+                    }
+                </select>
+                <span asp-validation-for="Level" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                <label asp-for="Content" class="form-label text-muted fw-500 m-0">
+                    Hikaye Metni <span class="badge-custom badge-type ms-1">Düz Metin & Markdown Destekli</span>
+                </label>
+                <div class="editor-view-tabs">
+                    <button type="button" class="editor-tab-btn active" data-mode="write">
+                        <i class="bi bi-pencil-square"></i> Yaz
+                    </button>
+                    <button type="button" class="editor-tab-btn" data-mode="split">
+                        <i class="bi bi-layout-split"></i> Yan Yana
+                    </button>
+                    <button type="button" class="editor-tab-btn" data-mode="preview">
+                        <i class="bi bi-eye"></i> Önizleme
+                    </button>
+                </div>
+            </div>
+
+            <!-- Markdown Quick Toolbar -->
+            <div class="md-toolbar" id="md-toolbar">
+                <button type="button" class="md-tool-btn" data-prefix="## " data-suffix="" title="Başlık (H2)"><i class="bi bi-type-h2"></i></button>
+                <button type="button" class="md-tool-btn" data-prefix="### " data-suffix="" title="Alt Başlık (H3)"><i class="bi bi-type-h3"></i></button>
+                <span class="md-toolbar-divider"></span>
+                <button type="button" class="md-tool-btn" data-prefix="**" data-suffix="**" title="Kalın (**metin**)"><i class="bi bi-type-bold"></i></button>
+                <button type="button" class="md-tool-btn" data-prefix="*" data-suffix="*" title="İtalik (*metin*)"><i class="bi bi-type-italic"></i></button>
+                <button type="button" class="md-tool-btn" data-prefix="`" data-suffix="`" title="Vurgulu Kelime (`kelime`)"><i class="bi bi-code"></i></button>
+                <span class="md-toolbar-divider"></span>
+                <button type="button" class="md-tool-btn" data-prefix="> " data-suffix="" title="Alıntı (> metin)"><i class="bi bi-quote"></i></button>
+                <button type="button" class="md-tool-btn" data-prefix="- " data-suffix="" title="Liste (- öğe)"><i class="bi bi-list-ul"></i></button>
+                <button type="button" class="md-tool-btn" data-prefix="\n---\n" data-suffix="" title="Ayırıcı Çizgi"><i class="bi bi-hr"></i></button>
+            </div>
+
+            <div class="story-editor-workspace mode-write" id="editor-workspace">
+                <div class="editor-pane-write">
+                    <textarea asp-for="Content" id="story-content-input" class="form-control story-textarea" rows="14" placeholder="Hikayenizi düz metin veya Markdown formatında buraya yazabilir ya da yapıştırabilirsiniz...&#10;&#10;Örnek Markdown kullanımı:&#10;# Bölüm 1&#10;Once upon a time, there was a **brave** traveler..." required></textarea>
+                </div>
+                <div class="editor-pane-preview">
+                    <div class="preview-header text-muted small">
+                        <i class="bi bi-eye me-1"></i> Canlı Görünüm
+                    </div>
+                    <div id="story-live-preview" class="story-markdown-body p-3">
+                        <p class="text-muted small mb-0">Önizleme burada görünecek...</p>
+                    </div>
+                </div>
+            </div>
+            <span asp-validation-for="Content" class="text-danger small"></span>
+        </div>
+
+        <div class="d-flex gap-3 mt-4">
+            <button type="submit" class="btn-indigo">
+                <i class="bi bi-check-lg"></i> Hikayeyi Kaydet
+            </button>
+            <a asp-action="Index" class="btn-secondary-custom">
+                <i class="bi bi-x-circle"></i> İptal
+            </a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            const $textarea = $("#story-content-input");
+            const $preview = $("#story-live-preview");
+            const $workspace = $("#editor-workspace");
+
+            function updatePreview() {
+                const raw = $textarea.val();
+                if (!raw || !raw.trim()) {
+                    $preview.html('<p class="text-muted small mb-0">Önizleme burada görünecek...</p>');
+                } else {
+                    $preview.html(renderStoryContent(raw));
+                }
+            }
+
+            $textarea.on("input", updatePreview);
+            updatePreview();
+
+            // View Mode Switcher
+            $(".editor-tab-btn").click(function () {
+                const mode = $(this).data("mode");
+                $(".editor-tab-btn").removeClass("active");
+                $(this).addClass("active");
+
+                $workspace.removeClass("mode-write mode-split mode-preview").addClass("mode-" + mode);
+                if (mode === "preview") {
+                    $("#md-toolbar").addClass("opacity-50 pe-none");
+                } else {
+                    $("#md-toolbar").removeClass("opacity-50 pe-none");
+                }
+                updatePreview();
+            });
+
+            // Markdown Toolbar Insertion
+            $(".md-tool-btn").click(function () {
+                const prefix = $(this).data("prefix").replace(/\\n/g, '\n');
+                const suffix = $(this).data("suffix").replace(/\\n/g, '\n');
+                const el = $textarea[0];
+                const start = el.selectionStart;
+                const end = el.selectionEnd;
+                const text = $textarea.val();
+                const selected = text.substring(start, end) || "metin";
+
+                const replacement = prefix + selected + suffix;
+                $textarea.val(text.substring(0, start) + replacement + text.substring(end));
+                el.focus();
+                el.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+                updatePreview();
+            });
+        });
+    </script>
+}

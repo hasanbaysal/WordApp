@@ -1,0 +1,366 @@
+@using WordApp.Models
+@{
+    ViewData["Title"] = "Seviyeli Hikayeler";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4 mb-4">
+    <div>
+        <h1 class="section-page-title m-0 d-flex align-items-center gap-2">
+            <i class="bi bi-book-half text-primary"></i> Seviyeli Hikayeler
+        </h1>
+        <p class="text-muted mb-0 mt-1">Seviyenize uygun İngilizce hikayeler ekleyin, okuyun ve dinleyin</p>
+    </div>
+    <div>
+        <a asp-action="Create" class="btn-indigo">
+            <i class="bi bi-plus-circle-fill"></i> Yeni Hikaye Ekle
+        </a>
+    </div>
+</div>
+
+<!-- Metrics Grid -->
+<div class="metrics-grid mt-2">
+    <div class="metric-card" id="metric-story-total">
+        <div class="metric-icon total">
+            <i class="bi bi-journal-bookmark-fill"></i>
+        </div>
+        <div>
+            <div class="metric-value">@ViewBag.TotalStories</div>
+            <div class="metric-label">Toplam Hikaye</div>
+        </div>
+    </div>
+
+    <div class="metric-card" id="metric-story-beginner">
+        <div class="metric-icon learned">
+            <i class="bi bi-stars"></i>
+        </div>
+        <div>
+            <div class="metric-value">@ViewBag.BeginnerStories</div>
+            <div class="metric-label">Başlangıç (A1 - A2)</div>
+        </div>
+    </div>
+
+    <div class="metric-card" id="metric-story-intermediate">
+        <div class="metric-icon due">
+            <i class="bi bi-lightning-charge-fill"></i>
+        </div>
+        <div>
+            <div class="metric-value">@ViewBag.IntermediateStories</div>
+            <div class="metric-label">Orta Seviye (B1 - B2)</div>
+        </div>
+    </div>
+
+    <div class="metric-card" id="metric-story-advanced">
+        <div class="metric-icon unlearned">
+            <i class="bi bi-award-fill"></i>
+        </div>
+        <div>
+            <div class="metric-value">@ViewBag.AdvancedStories</div>
+            <div class="metric-label">İleri Seviye (C1 - C2)</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Panel -->
+<div class="filters-panel">
+    <div class="filters-title">
+        <i class="bi bi-filter-left text-primary"></i> Hikaye Filtreleme
+    </div>
+    <div class="row g-3 align-items-center">
+        <div class="col-md-5 col-sm-12">
+            <input type="text" id="story-search-input" class="form-control filter-control w-100" placeholder="Hikaye başlığı veya içeriğinde ara..." />
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <select id="story-level-select" class="form-select filter-control w-100">
+                <option value="">Tüm Seviyeler</option>
+                @foreach (var level in Enum.GetValues<WordLevel>())
+                {
+                    <option value="@level">@level</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4 col-sm-6 d-flex gap-2 align-items-center justify-content-md-end">
+            <div class="level-pills d-flex flex-wrap gap-1">
+                <button type="button" class="level-pill active" data-level="">Tümü</button>
+                @foreach (var level in Enum.GetValues<WordLevel>())
+                {
+                    <button type="button" class="level-pill" data-level="@level">@level</button>
+                }
+            </div>
+            <button id="clear-story-filters" class="btn btn-secondary-custom btn-sm-custom ms-auto" title="Filtreleri Temizle">
+                <i class="bi bi-x-circle"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Stories Grid Container -->
+<div id="stories-list-container">
+    <div class="text-center py-5" id="stories-loader">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Yükleniyor...</span>
+        </div>
+        <p class="text-muted mt-2">Hikayeler yükleniyor...</p>
+    </div>
+
+    <div class="story-grid" id="stories-grid" style="display:none;">
+        <!-- Dynamic story cards -->
+    </div>
+
+    <div class="text-center py-5" id="no-stories-placeholder" style="display:none;">
+        <i class="bi bi-journal-x fs-1 text-muted"></i>
+        <h4 class="mt-3 text-secondary">Henüz Hikaye Bulunamadı</h4>
+        <p class="text-muted">Arama kriterlerinizi değiştirebilir veya yeni bir seviyeli hikaye ekleyebilirsiniz.</p>
+        <a asp-action="Create" class="btn-indigo btn-sm-custom mt-2">
+            <i class="bi bi-plus-circle"></i> Yeni Hikaye Ekle
+        </a>
+    </div>
+</div>
+
+<!-- Quick Read Modal -->
+<div class="modal fade" id="storyReadModal" tabindex="-1" aria-labelledby="storyReadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content modal-custom-content">
+            <div class="modal-header modal-custom-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span id="modal-story-level" class="badge-custom"></span>
+                    <h5 class="modal-title modal-custom-title m-0" id="modal-story-title"></h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary border-opacity-10 text-muted small">
+                    <span><i class="bi bi-calendar3 me-1"></i> <span id="modal-story-date"></span></span>
+                    <a id="modal-story-full-link" href="#" class="text-primary text-decoration-none fw-500">
+                        <i class="bi bi-arrows-fullscreen me-1"></i> Tam Sayfa Görünümü
+                    </a>
+                </div>
+                <div id="modal-story-content" class="story-markdown-body"></div>
+            </div>
+            <div class="modal-footer modal-custom-footer">
+                <button type="button" class="btn btn-secondary-custom btn-sm-custom" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="story-scroll-sentinel" style="height:1px;"></div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            let currentPage = 1;
+            const PAGE_SIZE = 50;
+            let isLoading = false;
+            let hasMore = true;
+            let currentFilters = {};
+            let listRequest = null;
+            let storiesCache = {};
+
+            function debounce(func, wait) {
+                let timeout;
+                return function (...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), wait);
+                };
+            }
+
+            function getFilters() {
+                return {
+                    search: $("#story-search-input").val(),
+                    level: $("#story-level-select").val()
+                };
+            }
+
+            function resetAndLoad() {
+                if (listRequest) { listRequest.abort(); listRequest = null; }
+                isLoading = false;
+                currentPage = 1;
+                hasMore = true;
+                currentFilters = getFilters();
+                $("#stories-grid").empty();
+                $("#no-stories-placeholder").hide();
+                $("#stories-loader").show();
+                loadPage();
+            }
+
+            function loadPage() {
+                if (isLoading || !hasMore) return;
+                isLoading = true;
+                $("#stories-loader").show();
+
+                const params = {
+                    ...currentFilters,
+                    page: currentPage,
+                    pageSize: PAGE_SIZE
+                };
+
+                listRequest = $.getJSON("/Stories/GetStories", params, function (data) {
+                    isLoading = false;
+                    $("#stories-loader").hide();
+                    hasMore = data.hasMore;
+
+                    if (currentPage === 1 && (!data.items || data.items.length === 0)) {
+                        $("#no-stories-placeholder").show();
+                        updateStats();
+                        return;
+                    }
+
+                    let html = "";
+                    $.each(data.items, function (_, story) {
+                        storiesCache[story.id] = story;
+                        html += renderStoryCard(story);
+                    });
+
+                    $("#stories-grid").append(html).show();
+
+                    if (currentPage === 1) updateStats();
+                    currentPage++;
+
+                    observer.observe(document.getElementById("story-scroll-sentinel"));
+                }).fail(function (xhr, status) {
+                    if (status === 'abort') return;
+                    isLoading = false;
+                    $("#stories-loader").hide();
+                    alert("Hikayeler yüklenirken bir hata oluştu.");
+                });
+            }
+
+            const observer = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting && hasMore && !isLoading) {
+                        loadPage();
+                    }
+                });
+            }, { rootMargin: "200px" });
+
+            observer.observe(document.getElementById("story-scroll-sentinel"));
+
+            $("#story-search-input").on("input", debounce(resetAndLoad, 350));
+            $("#story-level-select").on("change", function () {
+                const val = $(this).val();
+                $(".level-pill").removeClass("active");
+                $(`.level-pill[data-level="${val}"]`).addClass("active");
+                resetAndLoad();
+            });
+
+            $(".level-pill").click(function () {
+                const level = $(this).data("level");
+                $(".level-pill").removeClass("active");
+                $(this).addClass("active");
+                $("#story-level-select").val(level);
+                resetAndLoad();
+            });
+
+            $("#clear-story-filters").click(function () {
+                $("#story-search-input").val("");
+                $("#story-level-select").val("");
+                $(".level-pill").removeClass("active");
+                $('.level-pill[data-level=""]').addClass("active");
+                resetAndLoad();
+            });
+
+            function escapeHtmlAttr(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
+            function renderStoryCard(s) {
+                const badgeLevelClass = "badge-level " + s.level.toLowerCase();
+                const renderedHtml = renderStoryContent(s.content);
+                const wordCount = extractPlainTextFromStory(s.content).split(/\s+/).filter(Boolean).length;
+
+                return `
+                    <div class="story-card" id="story-card-${s.id}">
+                        <div class="story-card-header">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <span class="badge-custom ${badgeLevelClass}">${s.level}</span>
+                                <span class="story-date" title="Oluşturulma Tarihi: ${s.createdAt}">
+                                    <i class="bi bi-calendar3 me-1"></i>${s.createdAt}
+                                </span>
+                            </div>
+                            <a href="/Stories/Details/${s.id}" class="story-card-title-link">
+                                <h3 class="story-card-title">${escapeHtmlAttr(s.title)}</h3>
+                            </a>
+                        </div>
+
+                        <div class="story-card-body story-markdown-body">
+                            ${renderedHtml}
+                        </div>
+
+                        <div class="story-card-footer">
+                            <div class="story-meta text-muted small">
+                                <i class="bi bi-file-text me-1"></i>${wordCount} kelime
+                            </div>
+                            <div class="action-buttons">
+                                <button type="button" class="btn btn-secondary-custom btn-sm-custom py-1 px-2 quick-read-btn" data-id="${s.id}" title="Hızlı Oku">
+                                    <i class="bi bi-book"></i> Önizle
+                                </button>
+                                <a href="/Stories/Details/${s.id}" class="btn-indigo btn-sm-custom py-1 px-3" title="Hikayeyi Oku">
+                                    <i class="bi bi-book-half"></i> Oku
+                                </a>
+                                <a href="/Stories/Edit/${s.id}" class="btn btn-secondary-custom btn-sm-custom p-1 px-2" title="Düzenle">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-secondary-custom btn-sm-custom text-danger p-1 px-2 delete-story-btn"
+                                    data-id="${s.id}" data-title="${escapeHtmlAttr(s.title)}" title="Sil">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            function updateStats() {
+                $.getJSON("/Stories/GetStats", function (s) {
+                    $("#metric-story-total .metric-value").text(s.total);
+                    $("#metric-story-beginner .metric-value").text(s.beginner);
+                    $("#metric-story-intermediate .metric-value").text(s.intermediate);
+                    $("#metric-story-advanced .metric-value").text(s.advanced);
+                });
+            }
+
+            // Quick Read Modal
+            $(document).on("click", ".quick-read-btn", function () {
+                const id = $(this).data("id");
+                const story = storiesCache[id];
+                if (!story) return;
+
+                $("#modal-story-title").text(story.title);
+                $("#modal-story-level").text(story.level).attr("class", "badge-custom badge-level " + story.level.toLowerCase());
+                $("#modal-story-date").text(story.createdAt);
+                $("#modal-story-full-link").attr("href", "/Stories/Details/" + story.id);
+                $("#modal-story-content").html(renderStoryContent(story.content));
+
+                new bootstrap.Modal(document.getElementById('storyReadModal')).show();
+            });
+
+            // Delete Story
+            $(document).on("click", ".delete-story-btn", function () {
+                const id = $(this).data("id");
+                const title = $(this).data("title");
+                if (confirm(`"${title}" başlıklı hikayeyi silmek istediğinize emin misiniz?`)) {
+                    $.post("/Stories/Delete", { id }, function (res) {
+                        if (res.success) {
+                            $(`#story-card-${id}`).fadeOut(300, function () {
+                                $(this).remove();
+                                updateStats();
+                                if ($("#stories-grid .story-card").length === 0) {
+                                    $("#no-stories-placeholder").show();
+                                }
+                            });
+                        } else {
+                            alert(res.message || "Hikaye silinemedi.");
+                        }
+                    });
+                }
+            });
+
+            resetAndLoad();
+        });
+    </script>
+}
