@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: wordapp
     restart: unless-stopped
+    network_mode: "host"
     environment:
       - ConnectionStrings__DefaultConnection=Host=127.0.0.1;Database=WordDb;Username=wordapp_user;Password=${POSTGRES_PASSWORD}
       - AdminSettings__Username=${ADMIN_USERNAME}
