@@ -1,0 +1,123 @@
+@model WordApp.Models.GrammarNote
+
+@{
+    ViewData["Title"] = "Gramer Notu Düzenle";
+}
+
+<div class="form-panel gn-form-panel">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <h2 class="form-title m-0"><i class="bi bi-pencil-square text-primary"></i> Gramer Notu Düzenle</h2>
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary-custom btn-sm-custom">
+            <i class="bi bi-arrow-left"></i> Nota Dön
+        </a>
+    </div>
+
+    <form asp-action="Edit" id="grammarNoteForm" method="post">
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger border-0 rounded-3 bg-danger bg-opacity-10 text-danger p-3 mb-4" role="alert">
+                Lütfen formdaki zorunlu alanları kontrol edin.
+            </div>
+        }
+
+        <input type="hidden" asp-for="Id" />
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-sm-4">
+                <label asp-for="OrderNumber" class="form-label text-muted fw-500">Sıra Numarası</label>
+                <div class="input-group">
+                    <span class="input-group-text gn-input-prefix">#</span>
+                    <input asp-for="OrderNumber" type="number" min="1" class="form-control filter-control" required />
+                </div>
+                <span asp-validation-for="OrderNumber" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-9 col-sm-8">
+                <label asp-for="Title" class="form-label text-muted fw-500">Başlık</label>
+                <input asp-for="Title" class="form-control filter-control w-100" placeholder="Örn: Present Perfect vs. Past Simple" required />
+                <span asp-validation-for="Title" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                <label asp-for="Content" class="form-label text-muted fw-500 m-0">
+                    İçerik <span class="badge-custom badge-type ms-1"><i class="bi bi-markdown me-1"></i>Markdown (GFM)</span>
+                </label>
+                <div class="editor-view-tabs">
+                    <button type="button" class="editor-tab-btn gn-editor-tab-btn active" data-mode="write">
+                        <i class="bi bi-pencil-square"></i> Yaz
+                    </button>
+                    <button type="button" class="editor-tab-btn gn-editor-tab-btn" data-mode="split">
+                        <i class="bi bi-layout-split"></i> Yan Yana
+                    </button>
+                    <button type="button" class="editor-tab-btn gn-editor-tab-btn" data-mode="preview">
+                        <i class="bi bi-eye"></i> Önizleme
+                    </button>
+                </div>
+            </div>
+
+            <!-- Markdown Toolbar -->
+            <div class="md-toolbar" id="gn-md-toolbar">
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-prefix="# " data-suffix="" data-placeholder="Ana Başlık" title="Başlık 1 (#)"><i class="bi bi-type-h1"></i></button>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-prefix="## " data-suffix="" data-placeholder="Bölüm Başlığı" title="Başlık 2 (##)"><i class="bi bi-type-h2"></i></button>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-prefix="### " data-suffix="" data-placeholder="Alt Başlık" title="Başlık 3 (###)"><i class="bi bi-type-h3"></i></button>
+                <span class="md-toolbar-divider"></span>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-prefix="**" data-suffix="**" data-placeholder="kalın metin" title="Kalın (Ctrl+B)"><i class="bi bi-type-bold"></i></button>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-prefix="*" data-suffix="*" data-placeholder="italik metin" title="İtalik (Ctrl+I)"><i class="bi bi-type-italic"></i></button>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-prefix="~~" data-suffix="~~" data-placeholder="yanlış kullanım" title="Üstü Çizili (~~metin~~)"><i class="bi bi-type-strikethrough"></i></button>
+                <span class="md-toolbar-divider"></span>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-prefix="`" data-suffix="`" data-placeholder="Subject + V2" title="Satır İçi Formül/Kod (`kod`)"><i class="bi bi-code"></i></button>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-action="codeblock" title="Kod / Formül Bloğu (```)"><i class="bi bi-code-square"></i></button>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-action="table" title="Markdown Tablo Ekle"><i class="bi bi-table"></i></button>
+                <span class="md-toolbar-divider"></span>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-prefix="> " data-suffix="" data-placeholder="İpucu veya önemli not" title="Alıntı / İpucu (> )"><i class="bi bi-quote"></i></button>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-prefix="- " data-suffix="" data-placeholder="Liste maddesi" title="Madde İşaretli Liste (- )"><i class="bi bi-list-ul"></i></button>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-prefix="1. " data-suffix="" data-placeholder="Numaralı madde" title="Numaralı Liste (1. )"><i class="bi bi-list-ol"></i></button>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-prefix="- [ ] " data-suffix="" data-placeholder="Kontrol maddesi" title="Görev Listesi (- [ ] )"><i class="bi bi-check2-square"></i></button>
+                <button type="button" class="md-tool-btn gn-md-tool-btn" data-prefix="\n---\n" data-suffix="" data-placeholder="" title="Ayırıcı Çizgi (---)"><i class="bi bi-hr"></i></button>
+                <button type="button" class="md-tool-btn gn-md-tool-btn gn-template-btn ms-auto" data-action="template" title="Hazır Gramer Notu Şablonu Ekle">
+                    <i class="bi bi-magic me-1"></i><span>Şablon</span>
+                </button>
+            </div>
+
+            <div class="story-editor-workspace gn-editor-workspace mode-write" id="gn-editor-workspace">
+                <div class="editor-pane-write">
+                    <textarea asp-for="Content" id="gn-content-input" class="form-control story-textarea gn-md-textarea" rows="16" placeholder="Gramer notunuzu Markdown formatında düzenleyin..." required></textarea>
+                </div>
+                <div class="editor-pane-preview gn-editor-preview">
+                    <div class="preview-header text-muted small d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-eye me-1"></i> Canlı Markdown Önizleme</span>
+                        <span class="opacity-75">GFM Destekli</span>
+                    </div>
+                    <div id="gn-live-preview" class="story-markdown-body gn-markdown-body p-3">
+                        <p class="text-muted small mb-0">Markdown önizlemesi burada canlı olarak görünecek...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gn-editor-statusbar d-flex justify-content-between align-items-center flex-wrap gap-2 text-muted small mt-2">
+                <span><i class="bi bi-keyboard me-1"></i>Kısayollar: <code>Ctrl+B</code> Kalın, <code>Ctrl+I</code> İtalik, <code>Tab</code> Girinti</span>
+                <span>
+                    <strong id="gn-editor-words">0</strong> kelime ·
+                    <strong id="gn-editor-lines">0</strong> satır ·
+                    <strong id="gn-editor-chars">0</strong> karakter
+                </span>
+            </div>
+            <span asp-validation-for="Content" class="text-danger small"></span>
+        </div>
+
+        <div class="d-flex gap-3 mt-4">
+            <button type="submit" class="btn-indigo">
+                <i class="bi bi-check-lg"></i> Değişiklikleri Kaydet
+            </button>
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn-secondary-custom">
+                <i class="bi bi-x-circle"></i> İptal
+            </a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_MarkdownEditorScripts" />
+}

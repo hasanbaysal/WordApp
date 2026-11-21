@@ -61,6 +61,71 @@ function extractPlainTextFromStory(rawText) {
     return (tempDiv.textContent || tempDiv.innerText || '').trim();
 }
 
+// Render Markdown with enhanced formatting for Grammar Notes (responsive tables, safe external links, optional TOC headings)
+function renderMarkdownEnhanced(rawText, options) {
+    const opts = options || {};
+    const sanitizedHtml = renderStoryContent(rawText);
+    if (!sanitizedHtml) {
+        return { html: '', headings: [] };
+    }
+
+    const container = document.createElement('div');
+    container.innerHTML = sanitizedHtml;
+
+    // Wrap tables in scrollable container for responsive mobile/card display
+    container.querySelectorAll('table').forEach(function (table) {
+        if (table.parentElement && table.parentElement.classList.contains('md-table-wrapper')) {
+            return;
+        }
+        const wrapper = document.createElement('div');
+        wrapper.className = 'md-table-wrapper';
+        table.parentNode.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+    });
+
+    // Ensure external links open safely in new tab
+    container.querySelectorAll('a[href]').forEach(function (link) {
+        const href = link.getAttribute('href') || '';
+        if (/^https?:\/\//i.test(href)) {
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener noreferrer');
+        }
+    });
+
+    // Make GFM task list checkboxes read-only and styled
+    container.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+        checkbox.setAttribute('disabled', 'disabled');
+        checkbox.classList.add('md-task-checkbox');
+        if (checkbox.parentElement && checkbox.parentElement.tagName === 'LI') {
+            checkbox.parentElement.classList.add('md-task-item');
+        }
+    });
+
+    const headings = [];
+    if (opts.collectHeadings) {
+        container.querySelectorAll('h1, h2, h3').forEach(function (heading, idx) {
+            const text = (heading.textContent || '').trim();
+            if (!text) return;
+            const id = 'gn-sec-' + (idx + 1);
+            heading.setAttribute('id', id);
+            headings.push({
+                id: id,
+                level: parseInt(heading.tagName.substring(1), 10),
+                text: text
+            });
+        });
+    }
+
+    return {
+        html: container.innerHTML,
+        headings: headings
+    };
+}
+
+function renderMarkdownContent(rawText) {
+    return renderMarkdownEnhanced(rawText, { collectHeadings: false }).html;
+}
+
 // Play audio dynamically using global HTML5 audio player
 function playWordAudio(button, url) {
     if (!url) {

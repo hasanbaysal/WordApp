@@ -1,0 +1,253 @@
+@model WordApp.Models.GrammarNote
+@using WordApp.Models
+
+@{
+    ViewData["Title"] = $"#{Model.OrderNumber} {Model.Title} - Gramer Notu";
+    var prevNote = ViewBag.PreviousNote as GrammarNote;
+    var nextNote = ViewBag.NextNote as GrammarNote;
+}
+
+<div class="details-container">
+    <!-- Top Navigation Bar -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <a asp-action="Index" class="btn-secondary-custom btn-sm-custom px-3">
+            <i class="bi bi-arrow-left"></i> Gramer Notlarına Dön
+        </a>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-secondary-custom btn-sm-custom px-3" id="btn-gn-copy-md" title="Ham Markdown içeriğini kopyala">
+                <i class="bi bi-clipboard"></i> <span>Markdown Kopyala</span>
+            </button>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-indigo btn-sm-custom px-3">
+                <i class="bi bi-pencil"></i> Düzenle
+            </a>
+            <button type="button" class="btn btn-danger btn-sm-custom px-3 d-inline-flex align-items-center gap-1" id="btn-gn-delete">
+                <i class="bi bi-trash"></i> Sil
+            </button>
+        </div>
+    </div>
+
+    <!-- Note Header Card -->
+    <div class="details-header-card mb-4">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <span class="gn-order-badge gn-order-badge-lg">Konu #@Model.OrderNumber.ToString("D2")</span>
+            <span class="badge-custom badge-type">
+                <i class="bi bi-markdown me-1"></i> Markdown
+            </span>
+            <span class="badge-custom badge-type" title="Oluşturulma Tarihi">
+                <i class="bi bi-calendar3 me-1"></i> @Model.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+            </span>
+            @if (Model.UpdatedAt > Model.CreatedAt.AddMinutes(1))
+            {
+                <span class="badge-custom badge-type" title="Son Güncelleme">
+                    <i class="bi bi-clock-history me-1"></i> Güncelleme: @Model.UpdatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                </span>
+            }
+            <span class="badge-custom badge-type">
+                <i class="bi bi-file-text me-1"></i> <span id="gn-word-count">0</span> kelime
+            </span>
+            <span class="badge-custom badge-type">
+                <i class="bi bi-clock me-1"></i> ~<span id="gn-read-time">1</span> dk okuma
+            </span>
+        </div>
+
+        <h1 class="details-word-title mb-3">@Model.Title</h1>
+
+        <!-- Display & Font Controls Bar -->
+        <div class="pt-3 border-top border-secondary border-opacity-10 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="editor-view-tabs">
+                <button type="button" class="editor-tab-btn active" id="btn-gn-mode-formatted" title="Biçimlendirilmiş Markdown Görünümü">
+                    <i class="bi bi-markdown"></i> Markdown Görünümü
+                </button>
+                <button type="button" class="editor-tab-btn" id="btn-gn-mode-raw" title="Ham Markdown Kaynağı">
+                    <i class="bi bi-code-slash"></i> Ham Kaynak
+                </button>
+            </div>
+
+            <div class="font-size-controls d-flex align-items-center gap-1">
+                <button type="button" class="btn btn-secondary-custom btn-sm-custom py-1 px-2" id="gn-font-decrease" title="Yazıyı Küçült">A-</button>
+                <button type="button" class="btn btn-secondary-custom btn-sm-custom py-1 px-2" id="gn-font-reset" title="Varsayılan Boyut">A</button>
+                <button type="button" class="btn btn-secondary-custom btn-sm-custom py-1 px-2" id="gn-font-increase" title="Yazıyı Büyüt">A+</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-Generated Table of Contents (shown when 2+ Markdown headings exist) -->
+    <div id="gn-toc-card" class="gn-toc-card mb-4" style="display:none;">
+        <div class="gn-toc-header">
+            <i class="bi bi-list-nested text-primary"></i>
+            <span>İçindekiler</span>
+        </div>
+        <nav id="gn-toc-list" class="gn-toc-list" aria-label="İçindekiler"></nav>
+    </div>
+
+    <!-- Note Content Card -->
+    <div class="details-card mb-4">
+        <div class="details-card-body p-4 p-md-5">
+            <!-- Hidden raw source for safe JS rendering -->
+            <textarea id="raw-gn-source" style="display:none;">@Model.Content</textarea>
+
+            <!-- Rendered Markdown output -->
+            <div id="gn-rendered-view" class="story-markdown-body gn-markdown-body story-reading-area"></div>
+
+            <!-- Raw Markdown source output -->
+            <pre id="gn-raw-view" class="gn-raw-source-area" style="display:none;"></pre>
+        </div>
+    </div>
+
+    <!-- Previous / Next Sequential Navigation -->
+    @if (prevNote != null || nextNote != null)
+    {
+        <div class="gn-seq-nav">
+            @if (prevNote != null)
+            {
+                <a asp-action="Details" asp-route-id="@prevNote.Id" class="gn-seq-card gn-seq-prev">
+                    <span class="gn-seq-dir"><i class="bi bi-arrow-left me-1"></i> Önceki Not</span>
+                    <span class="gn-seq-title">
+                        <span class="gn-order-badge me-2">#@prevNote.OrderNumber.ToString("D2")</span>@prevNote.Title
+                    </span>
+                </a>
+            }
+            else
+            {
+                <div></div>
+            }
+
+            @if (nextNote != null)
+            {
+                <a asp-action="Details" asp-route-id="@nextNote.Id" class="gn-seq-card gn-seq-next">
+                    <span class="gn-seq-dir">Sonraki Not <i class="bi bi-arrow-right ms-1"></i></span>
+                    <span class="gn-seq-title">
+                        <span class="gn-order-badge me-2">#@nextNote.OrderNumber.ToString("D2")</span>@nextNote.Title
+                    </span>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            const noteId = @Model.Id;
+            const noteTitle = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Title));
+            const rawContent = $("#raw-gn-source").val() || "";
+
+            // Render Markdown with TOC heading collection
+            const rendered = renderMarkdownEnhanced(rawContent, { collectHeadings: true });
+            $("#gn-rendered-view").html(rendered.html);
+            $("#gn-raw-view").text(rawContent);
+
+            // Build Table of Contents if 2+ headings exist
+            if (rendered.headings && rendered.headings.length >= 2) {
+                const $tocList = $("#gn-toc-list").empty();
+                rendered.headings.forEach(function (h) {
+                    const $link = $("<a>")
+                        .attr("href", "#" + h.id)
+                        .addClass("gn-toc-link gn-toc-level-" + h.level)
+                        .text(h.text);
+                    $tocList.append($link);
+                });
+                $("#gn-toc-card").show();
+            }
+
+            // Calculate word count & reading time
+            const plainText = extractPlainTextFromStory(rawContent);
+            const wordCount = plainText.split(/\s+/).filter(Boolean).length;
+            const readTime = Math.max(1, Math.ceil(wordCount / 160));
+            $("#gn-word-count").text(wordCount);
+            $("#gn-read-time").text(readTime);
+
+            // Toggle Formatted vs Raw Markdown view
+            $("#btn-gn-mode-formatted").click(function () {
+                $(this).addClass("active");
+                $("#btn-gn-mode-raw").removeClass("active");
+                $("#gn-raw-view").hide();
+                $("#gn-rendered-view").show();
+                if (rendered.headings && rendered.headings.length >= 2) {
+                    $("#gn-toc-card").show();
+                }
+            });
+
+            $("#btn-gn-mode-raw").click(function () {
+                $(this).addClass("active");
+                $("#btn-gn-mode-formatted").removeClass("active");
+                $("#gn-rendered-view").hide();
+                $("#gn-toc-card").hide();
+                $("#gn-raw-view").show();
+            });
+
+            // Font size controls
+            let currentFontSize = 1.08;
+            function applyFontSize() {
+                $("#gn-rendered-view").css("font-size", currentFontSize + "rem");
+                $("#gn-raw-view").css("font-size", Math.max(0.85, +(currentFontSize - 0.1).toFixed(2)) + "rem");
+            }
+            $("#gn-font-decrease").click(function () {
+                currentFontSize = Math.max(0.85, +(currentFontSize - 0.1).toFixed(2));
+                applyFontSize();
+            });
+            $("#gn-font-reset").click(function () {
+                currentFontSize = 1.08;
+                applyFontSize();
+            });
+            $("#gn-font-increase").click(function () {
+                currentFontSize = Math.min(1.55, +(currentFontSize + 0.1).toFixed(2));
+                applyFontSize();
+            });
+
+            // Copy Raw Markdown
+            $("#btn-gn-copy-md").click(function () {
+                const $btn = $(this);
+                const resetLabel = function () {
+                    $btn.find("i").attr("class", "bi bi-clipboard");
+                    $btn.find("span").text("Markdown Kopyala");
+                };
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(rawContent).then(function () {
+                        $btn.find("i").attr("class", "bi bi-check2 text-success");
+                        $btn.find("span").text("Kopyalandı!");
+                        setTimeout(resetLabel, 1800);
+                    }).catch(function () {
+                        fallbackCopy(rawContent, $btn, resetLabel);
+                    });
+                } else {
+                    fallbackCopy(rawContent, $btn, resetLabel);
+                }
+            });
+
+            function fallbackCopy(text, $btn, resetLabel) {
+                const temp = document.createElement("textarea");
+                temp.value = text;
+                temp.style.position = "fixed";
+                temp.style.opacity = "0";
+                document.body.appendChild(temp);
+                temp.select();
+                try {
+                    document.execCommand("copy");
+                    $btn.find("i").attr("class", "bi bi-check2 text-success");
+                    $btn.find("span").text("Kopyalandı!");
+                    setTimeout(resetLabel, 1800);
+                } catch (e) {
+                    alert("Kopyalama başarısız oldu.");
+                }
+                document.body.removeChild(temp);
+            }
+
+            // Delete Grammar Note
+            $("#btn-gn-delete").click(function () {
+                if (confirm(`"${noteTitle}" başlıklı gramer notunu silmek istediğinize emin misiniz?`)) {
+                    const $btn = $(this).prop("disabled", true);
+                    $.post("/GrammarNotes/Delete", { id: noteId }, function (res) {
+                        if (res.success) {
+                            window.location.href = "/GrammarNotes/Index";
+                        } else {
+                            alert(res.message || "Gramer notu silinemedi.");
+                            $btn.prop("disabled", false);
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

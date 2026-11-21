@@ -12,6 +12,7 @@ namespace WordApp.Data
 
         public DbSet<WordItem> Words { get; set; }
         public DbSet<Story> Stories { get; set; }
+        public DbSet<GrammarNote> GrammarNotes { get; set; }
         public DbSet<SystemSetting> SystemSettings { get; set; }
         public DbSet<User> Users { get; set; }
 
@@ -19,6 +20,9 @@ namespace WordApp.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            modelBuilder.Entity<GrammarNote>()
+                .HasIndex(g => g.OrderNumber)
+                .HasDatabaseName("ix_grammar_notes_order_number");
         }
     }
 }

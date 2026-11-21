@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using WordApp.Data;
 using WordApp.Models;
@@ -28,6 +29,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
     options.LogTo(Console.WriteLine, LogLevel.Warning);
 });
+
+// Persist Data Protection keys so auth cookies survive Docker rebuilds/redeployments
+var dataProtection = builder.Services.AddDataProtection()
+    .SetApplicationName("WordApp");
+
+var dpKeyDir = builder.Configuration["DataProtection:KeyDirectory"];
+if (!string.IsNullOrWhiteSpace(dpKeyDir))
+{
+    Directory.CreateDirectory(dpKeyDir);
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dpKeyDir));
+}
 
 // Configure Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -116,7 +128,7 @@ using (var scope = app.Services.CreateScope())
         if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("DevSettings:SeedSampleData"))
         {
             DevDataSeeder.Seed(context);
-            logger.LogInformation("Development sample words and stories seeded.");
+            logger.LogInformation("Development sample words, stories, and grammar notes seeded.");
         }
     }
     catch (Exception ex)

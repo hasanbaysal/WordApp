@@ -1,0 +1,426 @@
+@{
+    ViewData["Title"] = "Gramer Notları";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4 mb-4">
+    <div>
+        <h1 class="section-page-title m-0 d-flex align-items-center gap-2">
+            <i class="bi bi-journal-richtext text-primary"></i> Gramer Notları
+        </h1>
+        <p class="text-muted mb-0 mt-1">İngilizce dilbilgisi konularınızı sıra numarasına göre düzenleyin ve Markdown notlarınızı yönetin</p>
+    </div>
+    <div>
+        <a asp-action="Create" class="btn-indigo">
+            <i class="bi bi-plus-circle-fill"></i> Yeni Gramer Notu
+        </a>
+    </div>
+</div>
+
+<!-- Metrics Grid -->
+<div class="metrics-grid mt-2">
+    <div class="metric-card" id="metric-gn-total">
+        <div class="metric-icon total">
+            <i class="bi bi-journal-richtext"></i>
+        </div>
+        <div>
+            <div class="metric-value">@ViewBag.TotalNotes</div>
+            <div class="metric-label">Toplam Gramer Notu</div>
+        </div>
+    </div>
+
+    <div class="metric-card" id="metric-gn-next-order">
+        <div class="metric-icon learned">
+            <i class="bi bi-list-ol"></i>
+        </div>
+        <div>
+            <div class="metric-value">#@ViewBag.NextOrderNumber</div>
+            <div class="metric-label">Sıradaki Konu Numarası</div>
+        </div>
+    </div>
+
+    <div class="metric-card" id="metric-gn-updated">
+        <div class="metric-icon due">
+            <i class="bi bi-clock-history"></i>
+        </div>
+        <div>
+            <div class="metric-value gn-metric-date">@ViewBag.LatestUpdated</div>
+            <div class="metric-label">Son Güncelleme</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Panel -->
+<div class="filters-panel">
+    <div class="filters-title">
+        <i class="bi bi-filter-left text-primary"></i> Not Filtreleme & Sıralama
+    </div>
+    <div class="row g-3 align-items-center">
+        <div class="col-md-5 col-sm-12">
+            <input type="text" id="gn-search-input" class="form-control filter-control w-100" placeholder="Sıra no (#1), başlık veya Markdown içeriğinde ara..." />
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <select id="gn-sort-select" class="form-select filter-control w-100">
+                <option value="order_asc" selected>Sıra Numarası (Artan)</option>
+                <option value="order_desc">Sıra Numarası (Azalan)</option>
+                <option value="updated_desc">Son Güncellenen</option>
+            </select>
+        </div>
+        <div class="col-md-4 col-sm-6 d-flex gap-2 align-items-center justify-content-md-end">
+            <div class="editor-view-tabs" role="group" aria-label="Görünüm Modu">
+                <button type="button" class="editor-tab-btn gn-view-btn active" data-view="grid" title="Kart Görünümü">
+                    <i class="bi bi-grid-3x2-gap-fill"></i> Kart
+                </button>
+                <button type="button" class="editor-tab-btn gn-view-btn" data-view="list" title="Sıralı Liste Görünümü">
+                    <i class="bi bi-list-ul"></i> Liste
+                </button>
+            </div>
+            <button id="clear-gn-filters" class="btn btn-secondary-custom btn-sm-custom" title="Filtreleri Temizle">
+                <i class="bi bi-x-circle"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Notes List Container -->
+<div id="gn-list-container">
+    <div class="text-center py-5" id="gn-loader">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Yükleniyor...</span>
+        </div>
+        <p class="text-muted mt-2">Gramer notları yükleniyor...</p>
+    </div>
+
+    <div class="gn-grid" id="gn-items-container" style="display:none;">
+        <!-- Dynamic grammar note cards / list items -->
+    </div>
+
+    <div class="text-center py-5" id="no-gn-placeholder" style="display:none;">
+        <i class="bi bi-journal-x fs-1 text-muted"></i>
+        <h4 class="mt-3 text-secondary">Henüz Gramer Notu Bulunamadı</h4>
+        <p class="text-muted">Arama kriterlerinizi değiştirebilir veya Markdown destekli ilk gramer notunuzu ekleyebilirsiniz.</p>
+        <a asp-action="Create" class="btn-indigo btn-sm-custom mt-2">
+            <i class="bi bi-plus-circle"></i> Yeni Gramer Notu Ekle
+        </a>
+    </div>
+</div>
+
+<!-- Quick Read Modal -->
+<div class="modal fade" id="gnReadModal" tabindex="-1" aria-labelledby="gnReadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content modal-custom-content">
+            <div class="modal-header modal-custom-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span id="modal-gn-order" class="gn-order-badge"></span>
+                    <h5 class="modal-title modal-custom-title m-0" id="modal-gn-title"></h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white gn-modal-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-10 text-muted small">
+                    <span><i class="bi bi-clock-history me-1"></i> Güncelleme: <span id="modal-gn-date"></span></span>
+                    <div class="d-flex align-items-center gap-3">
+                        <a id="modal-gn-edit-link" href="#" class="text-muted text-decoration-none fw-500">
+                            <i class="bi bi-pencil me-1"></i> Düzenle
+                        </a>
+                        <a id="modal-gn-full-link" href="#" class="text-primary text-decoration-none fw-500">
+                            <i class="bi bi-arrows-fullscreen me-1"></i> Tam Sayfa Görünümü
+                        </a>
+                    </div>
+                </div>
+                <div id="modal-gn-content" class="story-markdown-body gn-markdown-body"></div>
+            </div>
+            <div class="modal-footer modal-custom-footer">
+                <button type="button" class="btn btn-secondary-custom btn-sm-custom" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="gn-scroll-sentinel" style="height:1px;"></div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            let currentPage = 1;
+            const PAGE_SIZE = 50;
+            let isLoading = false;
+            let hasMore = true;
+            let currentFilters = {};
+            let listRequest = null;
+            let notesCache = {};
+            let loadedNotesOrder = [];
+            let viewMode = localStorage.getItem('gn_view_mode') || 'grid';
+
+            function applyViewModeUI() {
+                $(".gn-view-btn").removeClass("active");
+                $(`.gn-view-btn[data-view="${viewMode}"]`).addClass("active");
+                const $container = $("#gn-items-container");
+                $container.removeClass("gn-grid gn-list").addClass(viewMode === 'list' ? 'gn-list' : 'gn-grid');
+            }
+
+            applyViewModeUI();
+
+            function debounce(func, wait) {
+                let timeout;
+                return function (...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), wait);
+                };
+            }
+
+            function getFilters() {
+                return {
+                    search: $("#gn-search-input").val(),
+                    sort: $("#gn-sort-select").val()
+                };
+            }
+
+            function resetAndLoad() {
+                if (listRequest) { listRequest.abort(); listRequest = null; }
+                isLoading = false;
+                currentPage = 1;
+                hasMore = true;
+                loadedNotesOrder = [];
+                currentFilters = getFilters();
+                $("#gn-items-container").empty();
+                $("#no-gn-placeholder").hide();
+                $("#gn-loader").show();
+                loadPage();
+            }
+
+            function rerenderLoadedNotes() {
+                const $container = $("#gn-items-container").empty();
+                if (!loadedNotesOrder.length) return;
+                let html = "";
+                loadedNotesOrder.forEach(function (id) {
+                    const note = notesCache[id];
+                    if (note) {
+                        html += viewMode === 'list' ? renderNoteListItem(note) : renderNoteCard(note);
+                    }
+                });
+                $container.html(html).show();
+            }
+
+            function loadPage() {
+                if (isLoading || !hasMore) return;
+                isLoading = true;
+                $("#gn-loader").show();
+
+                const params = {
+                    ...currentFilters,
+                    page: currentPage,
+                    pageSize: PAGE_SIZE
+                };
+
+                listRequest = $.getJSON("/GrammarNotes/GetNotes", params, function (data) {
+                    isLoading = false;
+                    $("#gn-loader").hide();
+                    hasMore = data.hasMore;
+
+                    if (currentPage === 1 && (!data.items || data.items.length === 0)) {
+                        $("#no-gn-placeholder").show();
+                        updateStats();
+                        return;
+                    }
+
+                    let html = "";
+                    $.each(data.items, function (_, note) {
+                        notesCache[note.id] = note;
+                        loadedNotesOrder.push(note.id);
+                        html += viewMode === 'list' ? renderNoteListItem(note) : renderNoteCard(note);
+                    });
+
+                    $("#gn-items-container").append(html).show();
+
+                    if (currentPage === 1) updateStats();
+                    currentPage++;
+
+                    observer.observe(document.getElementById("gn-scroll-sentinel"));
+                }).fail(function (xhr, status) {
+                    if (status === 'abort') return;
+                    isLoading = false;
+                    $("#gn-loader").hide();
+                    alert("Gramer notları yüklenirken bir hata oluştu.");
+                });
+            }
+
+            const observer = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting && hasMore && !isLoading) {
+                        loadPage();
+                    }
+                });
+            }, { rootMargin: "200px" });
+
+            observer.observe(document.getElementById("gn-scroll-sentinel"));
+
+            $("#gn-search-input").on("input", debounce(resetAndLoad, 350));
+            $("#gn-sort-select").on("change", resetAndLoad);
+
+            $(".gn-view-btn").click(function () {
+                const newMode = $(this).data("view");
+                if (newMode === viewMode) return;
+                viewMode = newMode;
+                localStorage.setItem('gn_view_mode', viewMode);
+                applyViewModeUI();
+                rerenderLoadedNotes();
+            });
+
+            $("#clear-gn-filters").click(function () {
+                $("#gn-search-input").val("");
+                $("#gn-sort-select").val("order_asc");
+                resetAndLoad();
+            });
+
+            function escapeHtmlAttr(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
+            function formatOrderNumber(num) {
+                return "#" + String(num).padStart(2, '0');
+            }
+
+            function renderNoteCard(n) {
+                const renderedHtml = renderMarkdownContent(n.content);
+                const plainText = extractPlainTextFromStory(n.content);
+                const wordCount = plainText.split(/\s+/).filter(Boolean).length;
+
+                return `
+                    <div class="gn-card" id="gn-item-${n.id}">
+                        <div class="gn-card-header">
+                            <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                <span class="gn-order-badge" title="Sıra Numarası">${formatOrderNumber(n.orderNumber)}</span>
+                                <span class="story-date" title="Son Güncelleme: ${n.updatedAt}">
+                                    <i class="bi bi-clock-history me-1"></i>${n.updatedAt}
+                                </span>
+                            </div>
+                            <a href="/GrammarNotes/Details/${n.id}" class="story-card-title-link">
+                                <h3 class="story-card-title">${escapeHtmlAttr(n.title)}</h3>
+                            </a>
+                        </div>
+
+                        <div class="story-card-body gn-card-body story-markdown-body gn-markdown-body">
+                            ${renderedHtml}
+                        </div>
+
+                        <div class="story-card-footer">
+                            <div class="story-meta text-muted small d-flex align-items-center gap-2">
+                                <span><i class="bi bi-markdown me-1"></i>Markdown</span>
+                                <span class="opacity-50">•</span>
+                                <span>${wordCount} kelime</span>
+                            </div>
+                            <div class="action-buttons">
+                                <button type="button" class="btn btn-secondary-custom btn-sm-custom py-1 px-2 quick-read-gn-btn" data-id="${n.id}" title="Hızlı Önizle">
+                                    <i class="bi bi-eye"></i> Önizle
+                                </button>
+                                <a href="/GrammarNotes/Details/${n.id}" class="btn-indigo btn-sm-custom py-1 px-3" title="Notu Aç">
+                                    <i class="bi bi-journal-text"></i> Aç
+                                </a>
+                                <a href="/GrammarNotes/Edit/${n.id}" class="btn btn-secondary-custom btn-sm-custom p-1 px-2" title="Düzenle">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-secondary-custom btn-sm-custom text-danger p-1 px-2 delete-gn-btn"
+                                    data-id="${n.id}" data-title="${escapeHtmlAttr(n.title)}" title="Sil">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            function renderNoteListItem(n) {
+                const plainText = extractPlainTextFromStory(n.content);
+                const wordCount = plainText.split(/\s+/).filter(Boolean).length;
+                const excerpt = plainText.length > 160 ? plainText.substring(0, 160).trim() + "…" : plainText;
+
+                return `
+                    <div class="gn-list-item" id="gn-item-${n.id}">
+                        <div class="gn-list-left">
+                            <span class="gn-order-badge gn-order-badge-lg">${formatOrderNumber(n.orderNumber)}</span>
+                            <div class="gn-list-info">
+                                <a href="/GrammarNotes/Details/${n.id}" class="story-card-title-link">
+                                    <h3 class="gn-list-title">${escapeHtmlAttr(n.title)}</h3>
+                                </a>
+                                <p class="gn-list-excerpt mb-1">${escapeHtmlAttr(excerpt)}</p>
+                                <div class="gn-list-meta text-muted small">
+                                    <span><i class="bi bi-clock-history me-1"></i>${n.updatedAt}</span>
+                                    <span class="mx-2 opacity-50">•</span>
+                                    <span><i class="bi bi-file-text me-1"></i>${wordCount} kelime</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="action-buttons gn-list-actions">
+                            <button type="button" class="btn btn-secondary-custom btn-sm-custom py-1 px-2 quick-read-gn-btn" data-id="${n.id}" title="Hızlı Önizle">
+                                <i class="bi bi-eye"></i> Önizle
+                            </button>
+                            <a href="/GrammarNotes/Details/${n.id}" class="btn-indigo btn-sm-custom py-1 px-3" title="Notu Aç">
+                                <i class="bi bi-journal-text"></i> Aç
+                            </a>
+                            <a href="/GrammarNotes/Edit/${n.id}" class="btn btn-secondary-custom btn-sm-custom p-1 px-2" title="Düzenle">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <button type="button" class="btn btn-secondary-custom btn-sm-custom text-danger p-1 px-2 delete-gn-btn"
+                                data-id="${n.id}" data-title="${escapeHtmlAttr(n.title)}" title="Sil">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>`;
+            }
+
+            function updateStats() {
+                $.getJSON("/GrammarNotes/GetStats", function (s) {
+                    $("#metric-gn-total .metric-value").text(s.total);
+                    $("#metric-gn-next-order .metric-value").text("#" + s.nextOrderNumber);
+                    $("#metric-gn-updated .metric-value").text(s.latestUpdated);
+                });
+            }
+
+            // Quick Read Modal
+            $(document).on("click", ".quick-read-gn-btn", function () {
+                const id = $(this).data("id");
+                const note = notesCache[id];
+                if (!note) return;
+
+                $("#modal-gn-order").text(formatOrderNumber(note.orderNumber));
+                $("#modal-gn-title").text(note.title);
+                $("#modal-gn-date").text(note.updatedAt);
+                $("#modal-gn-edit-link").attr("href", "/GrammarNotes/Edit/" + note.id);
+                $("#modal-gn-full-link").attr("href", "/GrammarNotes/Details/" + note.id);
+                $("#modal-gn-content").html(renderMarkdownContent(note.content));
+
+                new bootstrap.Modal(document.getElementById('gnReadModal')).show();
+            });
+
+            // Delete Note
+            $(document).on("click", ".delete-gn-btn", function () {
+                const id = $(this).data("id");
+                const title = $(this).data("title");
+                if (confirm(`"${title}" başlıklı gramer notunu silmek istediğinize emin misiniz?`)) {
+                    $.post("/GrammarNotes/Delete", { id }, function (res) {
+                        if (res.success) {
+                            loadedNotesOrder = loadedNotesOrder.filter(x => x !== id);
+                            delete notesCache[id];
+                            $(`#gn-item-${id}`).fadeOut(300, function () {
+                                $(this).remove();
+                                updateStats();
+                                if ($("#gn-items-container").children().length === 0) {
+                                    $("#no-gn-placeholder").show();
+                                }
+                            });
+                        } else {
+                            alert(res.message || "Gramer notu silinemedi.");
+                        }
+                    });
+                }
+            });
+
+            resetAndLoad();
+        });
+    </script>
+}

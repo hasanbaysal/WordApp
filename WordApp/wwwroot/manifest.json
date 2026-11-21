@@ -44,6 +44,12 @@
       "short_name": "Hikayeler",
       "url": "/Stories",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Gramer Notları",
+      "short_name": "Gramer",
+      "url": "/GrammarNotes",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

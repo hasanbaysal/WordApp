@@ -18,6 +18,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 # Güvenlik: .NET imajı zaten 'app' kullanıcısıyla geliyor
+# Data Protection anahtar klasörünü non-root 'app' kullanıcısına ait olarak hazırla
+RUN mkdir -p /app/keys && chown -R app:app /app/keys
 USER app
 
 COPY --from=build /app/publish .

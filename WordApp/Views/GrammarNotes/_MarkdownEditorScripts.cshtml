@@ -1,0 +1,134 @@
+<script>
+    $(document).ready(function () {
+        const $textarea = $("#gn-content-input");
+        const $preview = $("#gn-live-preview");
+        const $workspace = $("#gn-editor-workspace");
+        const $toolbar = $("#gn-md-toolbar");
+
+        function setMode(mode) {
+            $(".gn-editor-tab-btn").removeClass("active");
+            $(`.gn-editor-tab-btn[data-mode="${mode}"]`).addClass("active");
+            $workspace.removeClass("mode-write mode-split mode-preview").addClass("mode-" + mode);
+            if (mode === "preview") {
+                $toolbar.addClass("opacity-50 pe-none");
+            } else {
+                $toolbar.removeClass("opacity-50 pe-none");
+            }
+            updatePreview();
+        }
+
+        function updateMetrics(raw) {
+            const text = raw || "";
+            const lines = text ? text.split(/\r?\n/).length : 0;
+            const plain = extractPlainTextFromStory(text);
+            const words = plain ? plain.split(/\s+/).filter(Boolean).length : 0;
+            $("#gn-editor-words").text(words);
+            $("#gn-editor-chars").text(text.length);
+            $("#gn-editor-lines").text(lines);
+        }
+
+        function updatePreview() {
+            const raw = $textarea.val();
+            if (!raw || !raw.trim()) {
+                $preview.html('<p class="text-muted small mb-0">Markdown önizlemesi burada canlı olarak görünecek...</p>');
+            } else {
+                $preview.html(renderMarkdownContent(raw));
+            }
+            updateMetrics(raw);
+        }
+
+        function insertAroundSelection(prefix, suffix, defaultPlaceholder) {
+            const el = $textarea[0];
+            const start = el.selectionStart;
+            const end = el.selectionEnd;
+            const text = $textarea.val();
+            const hasSelection = end > start;
+            const selected = hasSelection ? text.substring(start, end) : (defaultPlaceholder || "metin");
+
+            const replacement = prefix + selected + suffix;
+            $textarea.val(text.substring(0, start) + replacement + text.substring(end));
+            el.focus();
+            el.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+            updatePreview();
+        }
+
+        function insertSnippet(snippet) {
+            const el = $textarea[0];
+            const start = el.selectionStart;
+            const end = el.selectionEnd;
+            const text = $textarea.val();
+            const needsLeadingNewline = start > 0 && text[start - 1] !== '\n';
+            const finalSnippet = (needsLeadingNewline ? '\n\n' : '') + snippet;
+
+            $textarea.val(text.substring(0, start) + finalSnippet + text.substring(end));
+            el.focus();
+            const newPos = start + finalSnippet.length;
+            el.setSelectionRange(newPos, newPos);
+            updatePreview();
+        }
+
+        // Default to split view on wide desktop screens for Markdown-first authoring
+        if (window.innerWidth >= 992) {
+            setMode("split");
+        } else {
+            setMode("write");
+        }
+
+        $textarea.on("input", updatePreview);
+
+        $(".gn-editor-tab-btn").click(function () {
+            setMode($(this).data("mode"));
+        });
+
+        $(".gn-md-tool-btn").click(function () {
+            const action = $(this).data("action");
+
+            if (action === "table") {
+                insertSnippet("| Yapı | Örnek Cümle | Açıklama |\n| --- | --- | --- |\n| `Özne + Fiil` | I study every day. | Genel alışkanlıklar |\n");
+                return;
+            }
+
+            if (action === "codeblock") {
+                insertAroundSelection("```text\n", "\n```", "Formül veya örnek yapı");
+                return;
+            }
+
+            if (action === "template") {
+                const template = "## Kural Özeti\n\nBu konunun temel kullanım amacı...\n\n### Yapı & Formül\n\n| Durum | Formül | Örnek |\n| --- | --- | --- |\n| **Olumlu (+)** | `Subject + ...` | Örnek cümle |\n| **Olumsuz (-)** | `Subject + ...` | Örnek cümle |\n| **Soru (?)** | `Aux + Subject + ...?` | Örnek cümle |\n\n### Dikkat Edilmesi Gerekenler\n\n- ~~Yanlış kullanım~~ → **Doğru kullanım**\n\n> **İpucu:** Önemli hatırlatma notu buraya yazılabilir.\n";
+                insertSnippet(template);
+                return;
+            }
+
+            const prefix = String($(this).data("prefix") || "").replace(/\\n/g, '\n');
+            const suffix = String($(this).data("suffix") || "").replace(/\\n/g, '\n');
+            const placeholder = $(this).data("placeholder") || "metin";
+            insertAroundSelection(prefix, suffix, placeholder);
+        });
+
+        // Keyboard shortcuts: Tab indentation, Ctrl+B bold, Ctrl+I italic
+        $textarea.on("keydown", function (e) {
+            if (e.key === "Tab") {
+                e.preventDefault();
+                const el = this;
+                const start = el.selectionStart;
+                const end = el.selectionEnd;
+                const val = $textarea.val();
+                $textarea.val(val.substring(0, start) + "  " + val.substring(end));
+                el.setSelectionRange(start + 2, start + 2);
+                updatePreview();
+                return;
+            }
+
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+                const key = e.key.toLowerCase();
+                if (key === "b") {
+                    e.preventDefault();
+                    insertAroundSelection("**", "**", "kalın metin");
+                } else if (key === "i") {
+                    e.preventDefault();
+                    insertAroundSelection("*", "*", "italik metin");
+                }
+            }
+        });
+    });
+</script>

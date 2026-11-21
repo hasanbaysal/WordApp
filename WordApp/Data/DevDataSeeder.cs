@@ -159,6 +159,35 @@ namespace WordApp.Data
                     });
             }
 
+            if (!context.GrammarNotes.Any())
+            {
+                context.GrammarNotes.AddRange(
+                    new GrammarNote
+                    {
+                        OrderNumber = 1,
+                        Title = "Present Perfect vs. Past Simple",
+                        Content = "## Ne Zaman Hangisi Kullanılır?\n\n**Present Perfect** geçmişte başlayıp bugüne etkisi süren veya zamanı belirtilmeyen durumlar için, **Past Simple** ise zamanı net olarak bitmiş geçmiş olaylar için kullanılır.\n\n### Yapı Karşılaştırması\n\n| Zaman | Formül | Örnek Cümle | Zaman İfadeleri |\n| --- | --- | --- | --- |\n| **Present Perfect** | `Subject + have/has + V3` | I **have visited** Rome twice. | `ever`, `never`, `already`, `yet`, `since`, `for` |\n| **Past Simple** | `Subject + V2` | I **visited** Rome in 2022. | `yesterday`, `last week`, `in 2022`, `ago` |\n\n### Sık Yapılan Hatalar\n\n- ~~I have seen him yesterday.~~ → **I saw him yesterday.**\n- ~~Did you ever been to London?~~ → **Have you ever been to London?**\n\n> **İpucu:** Cümlede bitmiş net bir zaman (*yesterday, last year, in 2020*) varsa mutlaka **Past Simple** kullan.",
+                        CreatedAt = now.AddDays(-6),
+                        UpdatedAt = now.AddDays(-2)
+                    },
+                    new GrammarNote
+                    {
+                        OrderNumber = 2,
+                        Title = "Conditionals (If Clauses: Type 0, 1, 2, 3)",
+                        Content = "## Koşul Cümleleri Özeti\n\nİngilizcede 4 temel koşul yapısı bulunur:\n\n| Tip | Kullanım | If Clause | Main Clause |\n| --- | --- | --- | --- |\n| **Type 0** | Genel doğrular | `Present Simple` | `Present Simple` |\n| **Type 1** | Gerçekleşebilir olasılık | `Present Simple` | `will + V1` |\n| **Type 2** | Hayali / şimdiki gerçek dışı | `Past Simple` | `would + V1` |\n| **Type 3** | Geçmiş pişmanlık | `Past Perfect` | `would have + V3` |\n\n### Örnekler\n\n1. **Type 0:** If you heat ice, it melts.\n2. **Type 1:** If it rains tomorrow, we will stay home.\n3. **Type 2:** If I **were** you, I would accept the offer.\n4. **Type 3:** If she had studied harder, she would have passed the exam.\n\n```text\nMixed Conditional (Geçmiş koşul -> Şimdiki sonuç):\nIf + Past Perfect, ... would + V1\nIf I had taken that job, I would be living in Berlin now.\n```",
+                        CreatedAt = now.AddDays(-4),
+                        UpdatedAt = now.AddDays(-1)
+                    },
+                    new GrammarNote
+                    {
+                        OrderNumber = 3,
+                        Title = "Prepositions of Time: IN, ON, AT",
+                        Content = "## Zaman Edatları Piramidi\n\nGenişten dara doğru **IN → ON → AT** kuralını aklında tut:\n\n### 1. `IN` (Geniş Zaman Dilimleri)\n- Yüzyıllar, yıllar, aylar, mevsimler: `in 2026`, `in July`, `in summer`\n- Günün bölümleri: `in the morning`, `in the afternoon`, `in the evening`\n\n### 2. `ON` (Belirli Günler ve Tarihler)\n- Haftanın günleri: `on Monday`, `on Fridays`\n- Tam tarihler: `on November 21st`, `on my birthday`\n\n### 3. `AT` (Kesin Saat ve Anlar)\n- Saatler: `at 08:30`, `at noon`, `at midnight`\n- Sabit kalıplar: `at night`, `at the weekend` *(UK)*\n\n> **Dikkat:** `next`, `last`, `this`, `every` kelimelerinden önce **in / on / at** kullanılmaz!\n> Örn: ~~on next Monday~~ → **next Monday**",
+                        CreatedAt = now.AddDays(-2),
+                        UpdatedAt = now
+                    });
+            }
+
             context.SaveChanges();
         }
 

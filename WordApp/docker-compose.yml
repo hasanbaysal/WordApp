@@ -18,6 +18,12 @@ services:
       - TelegramSettings__BotToken=${TELEGRAM_BOT_TOKEN}
       - TelegramSettings__ChatId=${TELEGRAM_CHAT_ID}
       - TelegramSettings__Enabled=true
+      - DataProtection__KeyDirectory=/app/keys
       - ASPNETCORE_ENVIRONMENT=Production
+    volumes:
+      - wordapp_dpkeys:/app/keys
     ports:
       - "127.0.0.1:5000:5000"
+
+volumes:
+  wordapp_dpkeys:
