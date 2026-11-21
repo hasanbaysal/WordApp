@@ -43,6 +43,32 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
+
+        // Ensure existing tables created while Migrations/ was excluded from Docker builds
+        // are registered in __EFMigrationsHistory before running Migrate().
+        context.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS ""__EFMigrationsHistory"" (
+                ""MigrationId"" character varying(150) NOT NULL,
+                ""ProductVersion"" character varying(32) NOT NULL,
+                CONSTRAINT ""PK___EFMigrationsHistory"" PRIMARY KEY (""MigrationId"")
+            );
+
+            DO $$
+            BEGIN
+                IF to_regclass('public.words') IS NOT NULL THEN
+                    INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                    VALUES ('20260629214008_firs', '10.0.9')
+                    ON CONFLICT (""MigrationId"") DO NOTHING;
+                END IF;
+
+                IF to_regclass('public.stories') IS NOT NULL THEN
+                    INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+                    VALUES ('20261107083000_AddStoriesTable', '10.0.9')
+                    ON CONFLICT (""MigrationId"") DO NOTHING;
+                END IF;
+            END $$;
+        ");
+
         context.Database.Migrate();
 
         var adminSettings = builder.Configuration.GetSection("AdminSettings");
