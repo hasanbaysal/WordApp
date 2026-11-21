@@ -104,7 +104,7 @@
                 <option value="">Tüm Türler</option>
                 @foreach (var type in Enum.GetValues<WordType>())
                 {
-                    <option value="@type">@type</option>
+                    <option value="@type">@type.ToTurkishLabel()</option>
                 }
             </select>
         </div>
@@ -209,10 +209,7 @@
             <div class="modal-body p-4">
                 <div class="text-center mb-3">
                     <h2 id="modal-word-title" class="fw-bold mb-2"></h2>
-                    <div class="d-flex justify-content-center gap-2 mb-3">
-                        <span id="modal-word-level" class="badge-custom"></span>
-                        <span id="modal-word-type" class="badge-custom badge-type"></span>
-                    </div>
+                    <div id="modal-word-forms" class="d-flex justify-content-center flex-wrap gap-2 mb-3"></div>
                     
                     <div class="d-flex justify-content-center gap-2 mb-4">
                         <button type="button" id="modal-play-uk" class="btn-audio btn-indigo rounded-pill px-3 py-2 gap-2" style="display:none;">
@@ -411,11 +408,36 @@
             });
             resetAndLoad();
 
+            // ── HTML escaping & Form badges helper ──────────────────
+            function escapeHtml(text) {
+                return String(text ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function renderFormBadges(forms) {
+                if (!Array.isArray(forms) || forms.length === 0) return '';
+                return forms.map(function(f) {
+                    const levelText = escapeHtml(f.level || '');
+                    const levelClass = escapeHtml((f.level || '').toLowerCase());
+                    const typeLabel = escapeHtml(f.typeLabel || translateType(f.type));
+                    return `
+                        <span class="form-badge-group">
+                            <span class="badge-custom badge-level ${levelClass}">${levelText}</span>
+                            <span class="badge-custom badge-type">${typeLabel}</span>
+                        </span>`;
+                }).join('');
+            }
+
             // ── Render a single word card ────────────────────────────
             function renderWordCard(w) {
-                const badgeLevelClass = "badge-level " + w.level.toLowerCase();
-                let ukAudioBtn = w.ukMp3 ? `<button class="btn-audio" onclick="playWordAudio(this, '${w.ukMp3}')" title="İngiliz Telaffuzu"><i class="bi bi-volume-up"></i> UK</button>` : '';
-                let usAudioBtn = w.usMp3 ? `<button class="btn-audio" onclick="playWordAudio(this, '${w.usMp3}')" title="Amerikan Telaffuzu"><i class="bi bi-volume-up"></i> US</button>` : '';
+                const safeWord = escapeHtml(w.word);
+                const formBadgesHtml = renderFormBadges(w.forms);
+                let ukAudioBtn = w.ukMp3 ? `<button class="btn-audio" onclick="playWordAudio(this, '${escapeHtml(w.ukMp3)}')" title="İngiliz Telaffuzu"><i class="bi bi-volume-up"></i> UK</button>` : '';
+                let usAudioBtn = w.usMp3 ? `<button class="btn-audio" onclick="playWordAudio(this, '${escapeHtml(w.usMp3)}')" title="Amerikan Telaffuzu"><i class="bi bi-volume-up"></i> US</button>` : '';
 
                 let srsStatus = "";
                 let actionBtn = "";
@@ -427,12 +449,12 @@
                     srsStatus = `${dueBadge}<span class="mt-1">Aralık: <strong>${w.intervalDays} gün</strong></span>`;
                     actionBtn = `
                         <button class="btn-indigo btn-sm-custom py-1 px-2 open-review-modal"
-                            data-id="${w.id}" data-word="${w.word}" data-level="${w.level}"
-                            data-type="${w.type}" data-uk="${w.ukMp3 || ''}" data-us="${w.usMp3 || ''}">
+                            data-id="${w.id}" data-word="${safeWord}"
+                            data-uk="${escapeHtml(w.ukMp3 || '')}" data-us="${escapeHtml(w.usMp3 || '')}">
                             <i class="bi bi-arrow-repeat"></i> Tekrar Et
                         </button>
                         <button class="btn btn-secondary-custom btn-sm-custom text-warning p-1 px-2 unlearn-word-btn"
-                            data-id="${w.id}" data-word="${w.word}" title="Öğrenilmedi Olarak İşaretle">
+                            data-id="${w.id}" data-word="${safeWord}" title="Öğrenilmedi Olarak İşaretle">
                             <i class="bi bi-arrow-counterclockwise"></i>
                         </button>`;
                     if (!w.nextReviewDate) {
@@ -443,7 +465,7 @@
                 } else {
                     srsStatus = `<span class="text-danger"><i class="bi bi-x-circle"></i> Öğrenilmedi</span>`;
                     actionBtn = `
-                        <button class="btn btn-success btn-sm-custom py-1 px-2 mark-learned-btn" data-id="${w.id}" data-word="${w.word}">
+                        <button class="btn btn-success btn-sm-custom py-1 px-2 mark-learned-btn" data-id="${w.id}" data-word="${safeWord}">
                             <i class="bi bi-check-lg"></i> Öğrendim
                         </button>`;
                 }
@@ -452,10 +474,9 @@
                     <div class="word-card" id="word-card-${w.id}">
                         <div class="word-header">
                             <div class="word-title-area">
-                                <h3 class="word-title">${w.word}</h3>
+                                <h3 class="word-title">${safeWord}</h3>
                                 <div class="badges-area">
-                                    <span class="badge-custom ${badgeLevelClass}">${w.level}</span>
-                                    <span class="badge-custom badge-type">${translateType(w.type)}</span>
+                                    ${formBadgesHtml}
                                 </div>
                             </div>
                             <div class="audio-controls">${ukAudioBtn}${usAudioBtn}</div>
@@ -474,7 +495,7 @@
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 <button class="btn btn-secondary-custom btn-sm-custom text-danger p-1 px-2 delete-word-btn"
-                                    data-id="${w.id}" data-word="${w.word}" title="Sil">
+                                    data-id="${w.id}" data-word="${safeWord}" title="Sil">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>
@@ -591,14 +612,12 @@
                 $("#custom-review-days").val("");
                 activeWordId   = $(this).data("id");
                 const word     = $(this).data("word");
-                const level    = $(this).data("level");
-                const type     = $(this).data("type");
                 const ukMp3    = $(this).data("uk");
                 const usMp3    = $(this).data("us");
 
                 $("#modal-word-title").text(word);
-                $("#modal-word-level").text(level).attr("class", "badge-custom badge-level " + level.toLowerCase());
-                $("#modal-word-type").text(translateType(type));
+                const badgesHtml = $(`#word-card-${activeWordId} .badges-area`).html() || "";
+                $("#modal-word-forms").html(badgesHtml);
                 const notes = $(`#word-card-${activeWordId} .word-body`).html();
                 $("#modal-word-notes").html(notes);
 

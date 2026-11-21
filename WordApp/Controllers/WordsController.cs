@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -63,11 +65,9 @@ namespace WordApp.Controllers
                 query = query.Where(w => w.Word.ToLower().Contains(searchLower));
             }
 
-            if (type.HasValue)
-                query = query.Where(w => w.Type == type.Value);
-
-            if (level.HasValue)
-                query = query.Where(w => w.Level == level.Value);
+            using var formsFilter = BuildFormsFilter(type, level);
+            if (formsFilter != null)
+                query = query.Where(w => EF.Functions.JsonContains(w.FormsJson, formsFilter));
 
             if (isLearned.HasValue)
                 query = query.Where(w => w.IsLearned == isLearned.Value);
@@ -97,8 +97,12 @@ namespace WordApp.Controllers
             {
                 w.Id,
                 w.Word,
-                Type = w.Type.ToString(),
-                Level = w.Level.ToString(),
+                Forms = w.GetForms().Select(f => new
+                {
+                    Type = f.Type.ToString(),
+                    TypeLabel = f.Type.ToTurkishLabel(),
+                    Level = f.Level.ToString()
+                }).ToList(),
                 w.UkMp3,
                 w.UsMp3,
                 w.IsLearned,
@@ -133,21 +137,42 @@ namespace WordApp.Controllers
         // GET: Words/Create
         public IActionResult Create()
         {
-            return View();
+            var wordItem = new WordItem();
+            wordItem.SetForms(new[]
+            {
+                new WordForm { Type = WordType.Noun, Level = WordLevel.A1 }
+            });
+            return View(wordItem);
         }
 
         // POST: Words/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(WordItem wordItem)
+        public async Task<IActionResult> Create(WordItem wordItem, List<WordForm>? forms)
         {
+            ModelState.Remove(nameof(WordItem.FormsJson));
+
+            wordItem.Word = (wordItem.Word ?? string.Empty).Trim();
+            var normalizedForms = WordFormSerializer.Normalize(forms);
+            wordItem.SetForms(normalizedForms);
+
+            if (normalizedForms.Count == 0)
+            {
+                ModelState.AddModelError("Forms", "En az bir tür ve seviye formu eklemelisiniz.");
+            }
+
+            if (!string.IsNullOrEmpty(wordItem.Word) && await _context.Words.AnyAsync(w => w.Word == wordItem.Word))
+            {
+                ModelState.AddModelError(nameof(WordItem.Word), "Bu kelime sistemde zaten kayıtlı. Yeni form eklemek için mevcut kelimeyi düzenleyebilirsiniz.");
+            }
+
             if (ModelState.IsValid)
             {
                 wordItem.CreatedAt = DateTime.UtcNow;
                 wordItem.IsLearned = false; // Initially unlearned
                 wordItem.NextReviewDate = null;
                 wordItem.IntervalDays = 0;
-                
+
                 _context.Add(wordItem);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
@@ -169,9 +194,25 @@ namespace WordApp.Controllers
         // POST: Words/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, WordItem wordItem)
+        public async Task<IActionResult> Edit(int id, WordItem wordItem, List<WordForm>? forms)
         {
             if (id != wordItem.Id) return NotFound();
+
+            ModelState.Remove(nameof(WordItem.FormsJson));
+
+            wordItem.Word = (wordItem.Word ?? string.Empty).Trim();
+            var normalizedForms = WordFormSerializer.Normalize(forms);
+            wordItem.SetForms(normalizedForms);
+
+            if (normalizedForms.Count == 0)
+            {
+                ModelState.AddModelError("Forms", "En az bir tür ve seviye formu eklemelisiniz.");
+            }
+
+            if (!string.IsNullOrEmpty(wordItem.Word) && await _context.Words.AnyAsync(w => w.Id != id && w.Word == wordItem.Word))
+            {
+                ModelState.AddModelError(nameof(WordItem.Word), "Bu kelime sistemde başka bir kayıtta zaten mevcut.");
+            }
 
             if (ModelState.IsValid)
             {
@@ -181,8 +222,7 @@ namespace WordApp.Controllers
                     if (existingWord == null) return NotFound();
 
                     existingWord.Word = wordItem.Word;
-                    existingWord.Type = wordItem.Type;
-                    existingWord.Level = wordItem.Level;
+                    existingWord.SetForms(normalizedForms);
                     existingWord.UkMp3 = wordItem.UkMp3;
                     existingWord.UsMp3 = wordItem.UsMp3;
                     existingWord.Notes = wordItem.Notes;
@@ -318,6 +358,38 @@ namespace WordApp.Controllers
                 reviewEnabled = word.NextReviewDate.HasValue,
                 nextReviewDate = word.NextReviewDate?.ToString("yyyy-MM-dd")
             });
+        }
+
+        private static JsonDocument? BuildFormsFilter(WordType? type, WordLevel? level)
+        {
+            if (type.HasValue && level.HasValue)
+            {
+                return JsonDocument.Parse(
+                    JsonSerializer.Serialize(new[]
+                    {
+                        new { type = (int)type.Value, level = (int)level.Value }
+                    }));
+            }
+
+            if (type.HasValue)
+            {
+                return JsonDocument.Parse(
+                    JsonSerializer.Serialize(new[]
+                    {
+                        new { type = (int)type.Value }
+                    }));
+            }
+
+            if (level.HasValue)
+            {
+                return JsonDocument.Parse(
+                    JsonSerializer.Serialize(new[]
+                    {
+                        new { level = (int)level.Value }
+                    }));
+            }
+
+            return null;
         }
 
         private bool WordItemExists(int id)

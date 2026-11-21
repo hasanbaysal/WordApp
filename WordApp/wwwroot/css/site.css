@@ -1826,3 +1826,85 @@ body::after {
         border-bottom: 1px solid var(--border-color);
     }
 }
+
+/* ── Multiple Word Forms Badges & Editor ───────────────────────────── */
+.form-badge-group {
+    display: inline-flex;
+    align-items: stretch;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.form-badge-group .badge-custom {
+    border-radius: 0;
+    border: none;
+    line-height: 1.3;
+    display: inline-flex;
+    align-items: center;
+}
+
+.form-badge-group .badge-level {
+    border-right: 1px solid var(--border-color);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.form-badge-group .badge-type {
+    text-transform: none;
+    font-weight: 500;
+}
+
+.word-forms-editor {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 18px;
+}
+
+.word-form-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.word-form-level-col {
+    width: 130px;
+    flex-shrink: 0;
+}
+
+.word-form-row .remove-form-btn {
+    height: 46px;
+    width: 44px;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.word-form-row .remove-form-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+[data-theme="light"] .form-badge-group {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .form-badge-group .badge-level {
+    border-right-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .word-forms-editor {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 576px) {
+    .word-form-row {
+        flex-wrap: wrap;
+    }
+    .word-form-level-col {
+        width: calc(100% - 54px);
+    }
+}

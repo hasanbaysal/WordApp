@@ -112,6 +112,11 @@ namespace WordApp.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("FormsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("forms");
+
                     b.Property<int>("IntervalDays")
                         .HasColumnType("integer")
                         .HasColumnName("interval_days");
@@ -124,10 +129,6 @@ namespace WordApp.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_reviewed_at");
 
-                    b.Property<int>("Level")
-                        .HasColumnType("integer")
-                        .HasColumnName("level");
-
                     b.Property<DateOnly?>("NextReviewDate")
                         .HasColumnType("date")
                         .HasColumnName("next_review_date");
@@ -135,10 +136,6 @@ namespace WordApp.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("text")
                         .HasColumnName("notes");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer")
-                        .HasColumnName("type");
 
                     b.Property<string>("UkMp3")
                         .HasColumnType("text")

@@ -3,6 +3,7 @@
 
 @{
     ViewData["Title"] = Model.Word + " - Kelime Detayları";
+    var wordForms = Model.GetForms();
 }
 
 <div class="details-container">
@@ -19,9 +20,14 @@
             <div class="col-md-8">
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <h1 class="details-word-title m-0">@Model.Word</h1>
-                    <div class="d-flex gap-2">
-                        <span class="badge-custom badge-level @Model.Level.ToString().ToLower()">@Model.Level</span>
-                        <span class="badge-custom badge-type">@TranslateType(Model.Type)</span>
+                    <div class="badges-area m-0">
+                        @foreach (var form in wordForms)
+                        {
+                            <span class="form-badge-group">
+                                <span class="badge-custom badge-level @form.Level.ToString().ToLower()">@form.Level</span>
+                                <span class="badge-custom badge-type">@form.Type.ToTurkishLabel()</span>
+                            </span>
+                        }
                     </div>
                 </div>
             </div>
@@ -182,33 +188,6 @@
         </div>
     </div>
 </div>
-
-@functions {
-    string TranslateType(WordType type)
-    {
-        return type switch
-        {
-            WordType.Adverb => "Zarf",
-            WordType.AuxiliaryVerb => "Yardımcı Fiil",
-            WordType.Conjunction => "Bağlaç",
-            WordType.DefiniteArticle => "Definite Article (the)",
-            WordType.Determiner => "Belirteç (Determiner)",
-            WordType.Exclamation => "Ünlem",
-            WordType.IndefiniteArticle => "Indefinite Article (a/an)",
-            WordType.InfinitiveMarker => "Mastar Eki (to)",
-            WordType.LinkingVerb => "Bağlama Fiili",
-            WordType.ModalVerb => "Modal Fiili",
-            WordType.Noun => "İsim",
-            WordType.Number => "Sayı",
-            WordType.OrdinalNumber => "Sıra Sayısı",
-            WordType.Preposition => "Edat",
-            WordType.Pronoun => "Zamir",
-            WordType.Verb => "Fiil",
-            WordType.Adjective => "Sıfat",
-            _ => type.ToString()
-        };
-    }
-}
 
 @section Scripts {
     <script>

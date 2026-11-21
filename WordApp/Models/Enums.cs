@@ -30,4 +30,29 @@ namespace WordApp.Models
         C1,
         C2
     }
+
+    public static class WordTypeExtensions
+    {
+        public static string ToTurkishLabel(this WordType type) => type switch
+        {
+            WordType.Adverb => "Zarf",
+            WordType.AuxiliaryVerb => "Yardımcı Fiil",
+            WordType.Conjunction => "Bağlaç",
+            WordType.DefiniteArticle => "Definite Article (the)",
+            WordType.Determiner => "Belirteç (Determiner)",
+            WordType.Exclamation => "Ünlem",
+            WordType.IndefiniteArticle => "Indefinite Article (a/an)",
+            WordType.InfinitiveMarker => "Mastar Eki (to)",
+            WordType.LinkingVerb => "Bağlama Fiili",
+            WordType.ModalVerb => "Modal Fiili",
+            WordType.Noun => "İsim",
+            WordType.Number => "Sayı",
+            WordType.OrdinalNumber => "Sıra Sayısı",
+            WordType.Preposition => "Edat",
+            WordType.Pronoun => "Zamir",
+            WordType.Verb => "Fiil",
+            WordType.Adjective => "Sıfat",
+            _ => type.ToString()
+        };
+    }
 }

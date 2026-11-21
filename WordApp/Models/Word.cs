@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -10,14 +11,12 @@ namespace WordApp.Models
         [Column("id")]
         public int Id { get; set; }
 
+        [Required(ErrorMessage = "Kelime alanı zorunludur.")]
         [Column("word")]
         public string Word { get; set; } = string.Empty;
 
-        [Column("type")]
-        public WordType Type { get; set; }
-
-        [Column("level")]
-        public WordLevel Level { get; set; }
+        [Column("forms", TypeName = "jsonb")]
+        public string FormsJson { get; set; } = "[]";
 
         [Column("uk_mp3")]
         public string? UkMp3 { get; set; }
@@ -42,5 +41,12 @@ namespace WordApp.Models
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public List<WordForm> GetForms() => WordFormSerializer.Deserialize(FormsJson);
+
+        public void SetForms(IEnumerable<WordForm>? forms)
+        {
+            FormsJson = WordFormSerializer.Serialize(forms);
+        }
     }
 }

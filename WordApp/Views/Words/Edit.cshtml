@@ -3,6 +3,11 @@
 
 @{
     ViewData["Title"] = "Kelime Düzenle";
+    var existingForms = Model?.GetForms() ?? new List<WordForm>();
+    if (existingForms.Count == 0)
+    {
+        existingForms.Add(new WordForm { Type = WordType.Noun, Level = WordLevel.A1 });
+    }
 }
 
 <!-- Quill Theme CSS CDN -->
@@ -26,34 +31,52 @@
         <input type="hidden" asp-for="LastReviewedAt" />
         <input type="hidden" asp-for="CreatedAt" />
 
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <label asp-for="Word" class="form-label text-muted fw-500">Kelime</label>
-                <input asp-for="Word" class="form-control filter-control w-100" placeholder="Örn: Serendipity" required />
-                <span asp-validation-for="Word" class="text-danger small"></span>
-            </div>
-            
-            <div class="col-md-3 col-sm-6">
-                <label asp-for="Type" class="form-label text-muted fw-500">Tür</label>
-                <select asp-for="Type" class="form-select filter-control w-100" required>
-                    @foreach (var type in Enum.GetValues<WordType>())
-                    {
-                        <option value="@type">@TranslateType(type)</option>
-                    }
-                </select>
-                <span asp-validation-for="Type" class="text-danger small"></span>
-            </div>
+        <div class="mb-4">
+            <label asp-for="Word" class="form-label text-muted fw-500">Kelime</label>
+            <input asp-for="Word" class="form-control filter-control w-100" placeholder="Örn: Serendipity" required />
+            <span asp-validation-for="Word" class="text-danger small"></span>
+        </div>
 
-            <div class="col-md-3 col-sm-6">
-                <label asp-for="Level" class="form-label text-muted fw-500">Seviye</label>
-                <select asp-for="Level" class="form-select filter-control w-100" required>
-                    @foreach (var level in Enum.GetValues<WordLevel>())
-                    {
-                        <option value="@level">@level</option>
-                    }
-                </select>
-                <span asp-validation-for="Level" class="text-danger small"></span>
+        <div class="word-forms-editor mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label text-muted fw-500 mb-0">Tür ve Seviye Formları</label>
+                <button type="button" id="add-form-btn" class="btn btn-secondary-custom btn-sm-custom">
+                    <i class="bi bi-plus-lg"></i> Form Ekle
+                </button>
             </div>
+            <p class="text-muted small mb-3">Bu kelimenin tüm tür ve seviye eşleşmelerini buradan yönetebilirsiniz.</p>
+
+            <div id="forms-list" class="d-flex flex-column gap-2">
+                @for (int i = 0; i < existingForms.Count; i++)
+                {
+                    var form = existingForms[i];
+                    <div class="word-form-row">
+                        <div class="flex-grow-1">
+                            <select name="forms[@i].Type" class="form-select filter-control w-100 form-type-select" required>
+                                @foreach (var type in Enum.GetValues<WordType>())
+                                {
+                                    <option value="@type" selected="@(form.Type == type ? "selected" : null)">@type.ToTurkishLabel()</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="word-form-level-col">
+                            <select name="forms[@i].Level" class="form-select filter-control w-100 form-level-select" required>
+                                @foreach (var level in Enum.GetValues<WordLevel>())
+                                {
+                                    <option value="@level" selected="@(form.Level == level ? "selected" : null)">@level</option>
+                                }
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-secondary-custom btn-sm-custom text-danger remove-form-btn" title="Formu Kaldır">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                }
+            </div>
+            @if (ViewData.ModelState.TryGetValue("Forms", out var formsState) && formsState.Errors.Count > 0)
+            {
+                <span class="text-danger small d-block mt-2">@formsState.Errors[0].ErrorMessage</span>
+            }
         </div>
 
         <div class="row g-3 mb-4">
@@ -89,38 +112,58 @@
     </form>
 </div>
 
-@functions {
-    string TranslateType(WordType type)
-    {
-        return type switch
-        {
-            WordType.Adverb => "Zarf",
-            WordType.AuxiliaryVerb => "Yardımcı Fiil",
-            WordType.Conjunction => "Bağlaç",
-            WordType.DefiniteArticle => "Definite Article (the)",
-            WordType.Determiner => "Belirteç (Determiner)",
-            WordType.Exclamation => "Ünlem",
-            WordType.IndefiniteArticle => "Indefinite Article (a/an)",
-            WordType.InfinitiveMarker => "Mastar Eki (to)",
-            WordType.LinkingVerb => "Bağlama Fiili",
-            WordType.ModalVerb => "Modal Fiili",
-            WordType.Noun => "İsim",
-            WordType.Number => "Sayı",
-            WordType.OrdinalNumber => "Sıra Sayısı",
-            WordType.Preposition => "Edat",
-            WordType.Pronoun => "Zamir",
-            WordType.Verb => "Fiil",
-            WordType.Adjective => "Sıfat",
-            _ => type.ToString()
-        };
-    }
-}
+<template id="word-form-row-template">
+    <div class="word-form-row">
+        <div class="flex-grow-1">
+            <select class="form-select filter-control w-100 form-type-select" required>
+                @foreach (var type in Enum.GetValues<WordType>())
+                {
+                    <option value="@type">@type.ToTurkishLabel()</option>
+                }
+            </select>
+        </div>
+        <div class="word-form-level-col">
+            <select class="form-select filter-control w-100 form-level-select" required>
+                @foreach (var level in Enum.GetValues<WordLevel>())
+                {
+                    <option value="@level">@level</option>
+                }
+            </select>
+        </div>
+        <button type="button" class="btn btn-secondary-custom btn-sm-custom text-danger remove-form-btn" title="Formu Kaldır">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+</template>
 
 @section Scripts {
     <!-- Quill Library JS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
     <script>
         $(document).ready(function () {
+            function reindexFormRows() {
+                var $rows = $("#forms-list .word-form-row");
+                $rows.each(function (index) {
+                    $(this).find(".form-type-select").attr("name", `forms[${index}].Type`);
+                    $(this).find(".form-level-select").attr("name", `forms[${index}].Level`);
+                });
+                $rows.find(".remove-form-btn").prop("disabled", $rows.length <= 1);
+            }
+
+            $("#add-form-btn").click(function () {
+                var tpl = document.getElementById("word-form-row-template");
+                $("#forms-list").append(tpl.content.cloneNode(true));
+                reindexFormRows();
+            });
+
+            $(document).on("click", ".remove-form-btn", function () {
+                if ($("#forms-list .word-form-row").length <= 1) return;
+                $(this).closest(".word-form-row").remove();
+                reindexFormRows();
+            });
+
+            reindexFormRows();
+
             // Initialize Quill Editor
             var quill = new Quill('#editor-container', {
                 theme: 'snow',
@@ -143,8 +186,8 @@
             // Bind Quill content to hidden textarea on form submit
             var form = document.getElementById('wordForm');
             form.onsubmit = function () {
+                reindexFormRows();
                 var notesTextarea = document.getElementById('notes-textarea');
-                // Save the innerHTML of the editor into the textarea
                 notesTextarea.value = quill.root.innerHTML === '<p><br></p>' ? '' : quill.root.innerHTML;
             };
         });
