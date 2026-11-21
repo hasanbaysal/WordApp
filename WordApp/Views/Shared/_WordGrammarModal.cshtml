@@ -1,0 +1,179 @@
+<!-- Grammar Info & Examples Large Popup Modal (Client-Side Free APIs, No Persistence) -->
+<div class="modal fade" id="wordGrammarModal" tabindex="-1" aria-labelledby="grammarModalWordTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable grammar-modal-dialog">
+        <div class="modal-content modal-custom-content grammar-modal-content">
+            <div class="modal-header modal-custom-header grammar-modal-header">
+                <div class="grammar-header-left">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <button type="button" id="grammar-back-btn" class="btn btn-secondary-custom btn-sm-custom grammar-back-btn" style="display:none;" title="Önceki kelimeye dön">
+                            <i class="bi bi-arrow-left"></i>
+                            <span id="grammar-back-label">Geri</span>
+                        </button>
+                        <h3 class="modal-title modal-custom-title grammar-word-heading mb-0" id="grammarModalWordTitle">—</h3>
+                        <div id="grammar-phonetics-area" class="d-flex align-items-center flex-wrap gap-2"></div>
+                    </div>
+                    <div class="d-flex align-items-center flex-wrap gap-2 mt-2">
+                        <div id="grammar-audio-controls" class="d-flex align-items-center flex-wrap gap-2"></div>
+                        <div id="grammar-tr-summary" class="d-flex align-items-center flex-wrap gap-1"></div>
+                    </div>
+                </div>
+
+                <div class="grammar-header-right">
+                    <form id="grammar-quick-search-form" class="grammar-quick-search" autocomplete="off">
+                        <div class="input-group input-group-sm">
+                            <input type="text" id="grammar-quick-search-input" class="form-control filter-control grammar-search-input" placeholder="Başka kelime ara..." aria-label="Kelime ara" />
+                            <button type="submit" class="btn btn-indigo btn-sm-custom grammar-search-btn" title="Ara">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <button type="button" class="btn-close grammar-modal-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+            </div>
+
+            <div class="modal-body grammar-modal-body">
+                <!-- Loading State -->
+                <div id="grammar-loading-state" class="grammar-state-box">
+                    <div class="grammar-loader-ring">
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Yükleniyor...</span>
+                        </div>
+                    </div>
+                    <h5 class="mt-3 mb-1 fw-semibold">Gramer bilgileri ve örnekler çekiliyor...</h5>
+                    <p class="text-muted small mb-0">Ücretsiz sözlük, çekim ve örnek cümle kaynakları taranıyor.</p>
+                </div>
+
+                <!-- Error / Not Found State -->
+                <div id="grammar-error-state" class="grammar-state-box" style="display:none;">
+                    <div class="grammar-error-icon">
+                        <i class="bi bi-search"></i>
+                    </div>
+                    <h5 id="grammar-error-title" class="mt-3 mb-2 fw-semibold">Kelime için bilgi bulunamadı</h5>
+                    <p id="grammar-error-desc" class="text-muted mb-3">
+                        Bu kelime veya ifade ücretsiz sözlük kaynaklarında bulunamadı. Yukarıdaki arama kutusundan kelimenin yalın halini deneyebilirsiniz.
+                    </p>
+                    <button type="button" id="grammar-retry-btn" class="btn-indigo btn-sm-custom">
+                        <i class="bi bi-arrow-clockwise"></i> Tekrar Dene
+                    </button>
+                </div>
+
+                <!-- Loaded Content State -->
+                <div id="grammar-content-state" style="display:none;">
+                    <!-- 1. Grammar Overview & Inflected Forms -->
+                    <section id="grammar-overview-section" class="grammar-section-card mb-4">
+                        <div class="grammar-section-header">
+                            <div class="grammar-section-icon primary">
+                                <i class="bi bi-diagram-3-fill"></i>
+                            </div>
+                            <div>
+                                <h5 class="grammar-section-title">Gramer Özeti ve Kelime Biçimleri</h5>
+                                <p class="grammar-section-subtitle">Kelime türleri, kullanım özellikleri ve çekim formları</p>
+                            </div>
+                        </div>
+
+                        <div id="grammar-pos-summary" class="grammar-subsection">
+                            <div class="grammar-sub-label">Kelime Türleri (Part of Speech)</div>
+                            <div id="grammar-pos-pills" class="d-flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <div id="grammar-traits-wrapper" class="grammar-subsection mt-3" style="display:none;">
+                            <div class="grammar-sub-label">Gramer ve Kullanım Özellikleri</div>
+                            <div id="grammar-traits-list" class="d-flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <div id="grammar-forms-wrapper" class="grammar-subsection mt-3" style="display:none;">
+                            <div class="grammar-sub-label">Çekimler ve Türev Biçimler (Inflections)</div>
+                            <div id="grammar-forms-grid" class="grammar-forms-grid"></div>
+                        </div>
+                    </section>
+
+                    <!-- 2. Meanings & Usage Examples by Part of Speech -->
+                    <section id="grammar-meanings-section" class="grammar-section-card mb-4" style="display:none;">
+                        <div class="grammar-section-header justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="grammar-section-icon indigo">
+                                    <i class="bi bi-book-half"></i>
+                                </div>
+                                <div>
+                                    <h5 class="grammar-section-title">Anlamlar ve Bağlam İçi Örnekler</h5>
+                                    <p class="grammar-section-subtitle">Kelime türüne göre tanımlar, gramer etiketleri ve örnek kullanımlar</p>
+                                </div>
+                            </div>
+                            <div id="grammar-pos-tabs" class="grammar-pos-tabs" role="tablist"></div>
+                        </div>
+                        <div id="grammar-meanings-list" class="grammar-meanings-list"></div>
+                    </section>
+
+                    <!-- 3. Bilingual Real-World Example Sentences (EN <-> TR) -->
+                    <section id="grammar-sentences-section" class="grammar-section-card mb-4" style="display:none;">
+                        <div class="grammar-section-header">
+                            <div class="grammar-section-icon success">
+                                <i class="bi bi-chat-quote-fill"></i>
+                            </div>
+                            <div>
+                                <h5 class="grammar-section-title">Örnek Cümleler (İngilizce &amp; Türkçe)</h5>
+                                <p class="grammar-section-subtitle">Cümle içi gerçek kullanımlar — dinlemek için hoparlör ikonuna tıklayın</p>
+                            </div>
+                        </div>
+                        <div id="grammar-sentences-list" class="grammar-sentences-grid"></div>
+                    </section>
+
+                    <!-- 4. Synonyms, Antonyms & Collocations -->
+                    <section id="grammar-relations-section" class="grammar-section-card" style="display:none;">
+                        <div class="grammar-section-header">
+                            <div class="grammar-section-icon warning">
+                                <i class="bi bi-bezier2"></i>
+                            </div>
+                            <div>
+                                <h5 class="grammar-section-title">Eş Anlamlılar, Zıt Anlamlılar ve Birlikte Kullanımlar</h5>
+                                <p class="grammar-section-subtitle">Herhangi bir kelimeye tıklayarak onun da gramer bilgisine bakabilirsiniz</p>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-4" id="grammar-synonyms-col" style="display:none;">
+                                <div class="grammar-relation-box">
+                                    <div class="grammar-relation-title text-success">
+                                        <i class="bi bi-plus-circle"></i> Eş Anlamlılar (Synonyms)
+                                    </div>
+                                    <div id="grammar-synonyms-list" class="grammar-chip-list"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4" id="grammar-antonyms-col" style="display:none;">
+                                <div class="grammar-relation-box">
+                                    <div class="grammar-relation-title text-danger">
+                                        <i class="bi bi-dash-circle"></i> Zıt Anlamlılar (Antonyms)
+                                    </div>
+                                    <div id="grammar-antonyms-list" class="grammar-chip-list"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4" id="grammar-collocations-col" style="display:none;">
+                                <div class="grammar-relation-box">
+                                    <div class="grammar-relation-title text-primary">
+                                        <i class="bi bi-link-45deg"></i> Sık Birlikte Kullanılanlar
+                                    </div>
+                                    <div id="grammar-collocations-list" class="grammar-chip-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <div class="modal-footer modal-custom-footer grammar-modal-footer justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <span class="grammar-ephemeral-note">
+                        <i class="bi bi-lightning-charge-fill text-warning"></i>
+                        Anlık ücretsiz API verisi · Kaydedilmez
+                    </span>
+                    <div id="grammar-sources-badges" class="d-flex align-items-center flex-wrap gap-1"></div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" id="grammar-refresh-btn" class="btn btn-secondary-custom btn-sm-custom" title="Verileri yeniden çek">
+                        <i class="bi bi-arrow-clockwise"></i> Yenile
+                    </button>
+                    <button type="button" class="btn btn-secondary-custom btn-sm-custom" data-bs-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

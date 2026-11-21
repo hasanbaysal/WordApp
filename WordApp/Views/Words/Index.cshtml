@@ -265,7 +265,10 @@
 <!-- Infinite scroll sentinel -->
 <div id="scroll-sentinel" style="height:1px;"></div>
 
+<partial name="_WordGrammarModal" />
+
 @section Scripts {
+    <script src="~/js/word-grammar.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function() {
             let activeWordId = null;
@@ -483,6 +486,16 @@
                         </div>
                         <div class="word-body">
                             ${w.notes || '<p class="text-muted small">Not eklenmemiş.</p>'}
+                        </div>
+                        <div class="word-grammar-action">
+                            <button type="button" class="btn-grammar-fetch open-grammar-modal"
+                                data-word="${safeWord}"
+                                data-uk="${escapeHtml(w.ukMp3 || '')}"
+                                data-us="${escapeHtml(w.usMp3 || '')}"
+                                title="Ücretsiz API'lerden anlık gramer bilgisi ve örnek cümle getir">
+                                <i class="bi bi-stars"></i>
+                                <span>Gramer Bilgisi ve Örnek Getir</span>
+                            </button>
                         </div>
                         <div class="word-footer">
                             <div class="srs-info">${srsStatus}</div>

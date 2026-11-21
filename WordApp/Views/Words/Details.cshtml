@@ -32,7 +32,16 @@
                 </div>
             </div>
             <div class="col-md-4 text-md-end">
-                <div class="d-flex justify-content-start justify-content-md-end gap-2">
+                <div class="d-flex justify-content-start justify-content-md-end flex-wrap gap-2">
+                    <button type="button"
+                            class="btn-grammar-fetch btn-grammar-fetch-inline open-grammar-modal"
+                            data-word="@Model.Word"
+                            data-uk="@(Model.UkMp3 ?? "")"
+                            data-us="@(Model.UsMp3 ?? "")"
+                            title="Ücretsiz API'lerden anlık gramer bilgisi ve örnek cümle getir">
+                        <i class="bi bi-stars"></i>
+                        <span>Gramer &amp; Örnek Getir</span>
+                    </button>
                     @if (!string.IsNullOrEmpty(Model.UkMp3))
                     {
                         <button type="button" class="btn-audio btn-indigo px-3 py-2 rounded-3 gap-2" onclick="playWordAudio(this, '@Model.UkMp3')">
@@ -189,7 +198,10 @@
     </div>
 </div>
 
+<partial name="_WordGrammarModal" />
+
 @section Scripts {
+    <script src="~/js/word-grammar.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function () {
             const wordId = @Model.Id;

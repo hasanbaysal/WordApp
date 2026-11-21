@@ -236,6 +236,19 @@
             display: block;
         }
 
+        .dev-mode-banner {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.28);
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+            color: #34d399;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         @@media (max-width: 480px) {
             .login-card {
                 padding: 30px 20px;
@@ -253,6 +266,18 @@
                 <h1>WordApp</h1>
                 <p>Kişisel Kelime Ezber Sistemi</p>
             </div>
+
+            @{
+                var bypassAuth = ViewBag.BypassAuthChallenges as bool? == true;
+            }
+
+            @if (bypassAuth)
+            {
+                <div class="dev-mode-banner">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                    <span>Development Modu: CAPTCHA ve 2FA kapalı, tek tıkla giriş yapabilirsiniz.</span>
+                </div>
+            }
 
             <form asp-action="Login" method="post" autocomplete="off">
                 @if (!ViewData.ModelState.IsValid)
@@ -273,21 +298,31 @@
                     <label class="form-label" asp-for="Password"></label>
                     <div class="input-wrapper">
                         <i class="bi bi-shield-lock"></i>
-                        <input asp-for="Password" class="form-control" placeholder="Şifrenizi girin" required />
+                        @if (bypassAuth && !string.IsNullOrEmpty(ViewBag.DevDefaultPassword as string))
+                        {
+                            <input asp-for="Password" value="@ViewBag.DevDefaultPassword" class="form-control" placeholder="Şifrenizi girin" required />
+                        }
+                        else
+                        {
+                            <input asp-for="Password" class="form-control" placeholder="Şifrenizi girin" required />
+                        }
                     </div>
                     <span asp-validation-for="Password"></span>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Güvenlik Doğrulaması</label>
-                    <div class="captcha-container">
-                        <div class="captcha-question">
-                            <i class="bi bi-shield-check"></i> @ViewBag.CaptchaQuestion
+                @if (!bypassAuth)
+                {
+                    <div class="form-group">
+                        <label class="form-label">Güvenlik Doğrulaması</label>
+                        <div class="captcha-container">
+                            <div class="captcha-question">
+                                <i class="bi bi-shield-check"></i> @ViewBag.CaptchaQuestion
+                            </div>
+                            <input asp-for="CaptchaAnswer" class="captcha-input" placeholder="?" required autocomplete="off" />
                         </div>
-                        <input asp-for="CaptchaAnswer" class="captcha-input" placeholder="?" required autocomplete="off" />
+                        <span asp-validation-for="CaptchaAnswer"></span>
                     </div>
-                    <span asp-validation-for="CaptchaAnswer"></span>
-                </div>
+                }
 
                 <button type="submit" class="btn-submit">
                     Giriş Yap <i class="bi bi-arrow-right-short"></i>

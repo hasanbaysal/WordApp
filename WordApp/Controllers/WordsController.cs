@@ -65,10 +65,6 @@ namespace WordApp.Controllers
                 query = query.Where(w => w.Word.ToLower().Contains(searchLower));
             }
 
-            using var formsFilter = BuildFormsFilter(type, level);
-            if (formsFilter != null)
-                query = query.Where(w => EF.Functions.JsonContains(w.FormsJson, formsFilter));
-
             if (isLearned.HasValue)
                 query = query.Where(w => w.IsLearned == isLearned.Value);
 
@@ -78,18 +74,54 @@ namespace WordApp.Controllers
                 query = query.Where(w => w.IsLearned && w.NextReviewDate != null && w.NextReviewDate.Value <= today);
             }
 
-            var totalCount = await query.CountAsync();
-
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 100);
             if (random) { page = 1; pageSize = 1; }
-            var orderedQuery = random
-                ? query.OrderBy(w => EF.Functions.Random())
-                : query.OrderBy(w => w.Word);
-            var words = await orderedQuery
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+
+            int totalCount;
+            List<WordItem> words;
+
+            if (_context.Database.IsNpgsql())
+            {
+                using var formsFilter = BuildFormsFilter(type, level);
+                if (formsFilter != null)
+                    query = query.Where(w => EF.Functions.JsonContains(w.FormsJson, formsFilter));
+
+                totalCount = await query.CountAsync();
+
+                var orderedQuery = random
+                    ? query.OrderBy(w => EF.Functions.Random())
+                    : query.OrderBy(w => w.Word);
+                words = await orderedQuery
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+            }
+            else
+            {
+                // InMemory fallback for local development (where PostgreSQL jsonb/random functions aren't available)
+                IEnumerable<WordItem> inMemoryItems = await query.ToListAsync();
+
+                if (type.HasValue || level.HasValue)
+                {
+                    inMemoryItems = inMemoryItems.Where(w =>
+                        w.GetForms().Any(f =>
+                            (!type.HasValue || f.Type == type.Value) &&
+                            (!level.HasValue || f.Level == level.Value)));
+                }
+
+                var filteredList = inMemoryItems.ToList();
+                totalCount = filteredList.Count;
+
+                var orderedItems = random
+                    ? filteredList.OrderBy(_ => Random.Shared.Next())
+                    : filteredList.OrderBy(w => w.Word, StringComparer.OrdinalIgnoreCase);
+
+                words = orderedItems
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+            }
 
             var today2 = DateOnly.FromDateTime(DateTime.Today);
 

@@ -8,11 +8,13 @@ using System.Net;
 using System.Net.Mail;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using WordApp.Data;
 using WordApp.Models;
 
@@ -22,13 +24,21 @@ namespace WordApp.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly IWebHostEnvironment _env;
         private static readonly ConcurrentDictionary<string, (int Attempts, DateTime LockoutUntil)> _loginAttempts = new();
 
-        public AccountController(ApplicationDbContext context, IConfiguration configuration)
+        public AccountController(
+            ApplicationDbContext context,
+            IConfiguration configuration,
+            IWebHostEnvironment env)
         {
             _context = context;
             _configuration = configuration;
+            _env = env;
         }
+
+        private bool BypassAuthChallenges =>
+            _env.IsDevelopment() && _configuration.GetValue<bool>("DevSettings:BypassAuthChallenges");
 
         [HttpGet]
         public IActionResult Login()
@@ -36,6 +46,16 @@ namespace WordApp.Controllers
             if (User.Identity?.IsAuthenticated == true)
             {
                 return RedirectToAction("Index", "Words");
+            }
+
+            ViewBag.BypassAuthChallenges = BypassAuthChallenges;
+
+            if (BypassAuthChallenges)
+            {
+                var devUser = _configuration["AdminSettings:Username"] ?? "admin";
+                var devPass = _configuration["AdminSettings:Password"] ?? "dev123";
+                ViewBag.DevDefaultPassword = devPass;
+                return View(new LoginViewModel { Username = devUser });
             }
 
             GenerateCaptcha();
@@ -47,10 +67,18 @@ namespace WordApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
+            var bypass = BypassAuthChallenges;
+            ViewBag.BypassAuthChallenges = bypass;
+            if (bypass)
+            {
+                ModelState.Remove(nameof(LoginViewModel.CaptchaAnswer));
+                ViewBag.DevDefaultPassword = _configuration["AdminSettings:Password"] ?? "dev123";
+            }
+
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
             // Check Rate Limit / Lockout
-            if (_loginAttempts.TryGetValue(ipAddress, out var attemptInfo))
+            if (!bypass && _loginAttempts.TryGetValue(ipAddress, out var attemptInfo))
             {
                 if (attemptInfo.LockoutUntil > DateTime.UtcNow)
                 {
@@ -63,21 +91,27 @@ namespace WordApp.Controllers
 
             if (!ModelState.IsValid)
             {
-                GenerateCaptcha();
-                ViewBag.CaptchaQuestion = HttpContext.Session.GetString("CaptchaQuestion");
+                if (!bypass)
+                {
+                    GenerateCaptcha();
+                    ViewBag.CaptchaQuestion = HttpContext.Session.GetString("CaptchaQuestion");
+                }
                 return View(model);
             }
 
-            // Verify CAPTCHA
-            var expectedAnswer = HttpContext.Session.GetString("CaptchaAnswer");
-            if (string.IsNullOrEmpty(expectedAnswer) || 
-                string.IsNullOrEmpty(model.CaptchaAnswer) || 
-                model.CaptchaAnswer.Trim().ToLowerInvariant() != expectedAnswer.Trim().ToLowerInvariant())
+            // Verify CAPTCHA (skipped only in Development when BypassAuthChallenges is enabled)
+            if (!bypass)
             {
-                ModelState.AddModelError("CaptchaAnswer", "Güvenlik sorusu cevabı yanlıştır.");
-                GenerateCaptcha();
-                ViewBag.CaptchaQuestion = HttpContext.Session.GetString("CaptchaQuestion");
-                return View(model);
+                var expectedAnswer = HttpContext.Session.GetString("CaptchaAnswer");
+                if (string.IsNullOrEmpty(expectedAnswer) ||
+                    string.IsNullOrEmpty(model.CaptchaAnswer) ||
+                    model.CaptchaAnswer.Trim().ToLowerInvariant() != expectedAnswer.Trim().ToLowerInvariant())
+                {
+                    ModelState.AddModelError("CaptchaAnswer", "Güvenlik sorusu cevabı yanlıştır.");
+                    GenerateCaptcha();
+                    ViewBag.CaptchaQuestion = HttpContext.Session.GetString("CaptchaQuestion");
+                    return View(model);
+                }
             }
 
             // Verify User
@@ -91,6 +125,13 @@ namespace WordApp.Controllers
                 {
                     // Reset rate limiting attempts on successful credentials verification
                     _loginAttempts.TryRemove(ipAddress, out _);
+
+                    // Development shortcut: skip 2FA email and sign in directly
+                    if (bypass)
+                    {
+                        await SignInUserAsync(user.Username);
+                        return RedirectToAction("Index", "Words");
+                    }
 
                     // Generate a 5-digit code
                     var random = new Random();
@@ -123,9 +164,9 @@ namespace WordApp.Controllers
             int attempts = 1;
             DateTime lockoutUntil = DateTime.MinValue;
 
-            if (_loginAttempts.TryGetValue(ipAddress, out attemptInfo))
+            if (!bypass && _loginAttempts.TryGetValue(ipAddress, out var failedAttemptInfo))
             {
-                attempts = attemptInfo.Attempts + 1;
+                attempts = failedAttemptInfo.Attempts + 1;
                 if (attempts >= 5)
                 {
                     lockoutUntil = DateTime.UtcNow.AddMinutes(5); // Lock for 5 minutes
@@ -141,10 +182,12 @@ namespace WordApp.Controllers
                 ModelState.AddModelError(string.Empty, "Geçersiz kullanıcı adı veya şifre.");
             }
 
-            _loginAttempts[ipAddress] = (attempts, lockoutUntil);
-
-            GenerateCaptcha();
-            ViewBag.CaptchaQuestion = HttpContext.Session.GetString("CaptchaQuestion");
+            if (!bypass)
+            {
+                _loginAttempts[ipAddress] = (attempts, lockoutUntil);
+                GenerateCaptcha();
+                ViewBag.CaptchaQuestion = HttpContext.Session.GetString("CaptchaQuestion");
+            }
             return View(model);
         }
 
@@ -303,9 +346,21 @@ namespace WordApp.Controllers
                 return RedirectToAction("Login");
             }
 
+            await SignInUserAsync(user.Username);
+
+            // Clear 2FA session variables
+            HttpContext.Session.Remove("2fa_code");
+            HttpContext.Session.Remove("2fa_username");
+            HttpContext.Session.Remove("2fa_expiry");
+
+            return RedirectToAction("Index", "Words");
+        }
+
+        private async Task SignInUserAsync(string username)
+        {
             var claims = new[]
             {
-                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Name, username),
                 new Claim(ClaimTypes.Role, "Admin")
             };
 
@@ -318,13 +373,6 @@ namespace WordApp.Controllers
                 IsPersistent = true,
                 ExpiresUtc = DateTimeOffset.UtcNow.AddDays(10)
             });
-
-            // Clear 2FA session variables
-            HttpContext.Session.Remove("2fa_code");
-            HttpContext.Session.Remove("2fa_username");
-            HttpContext.Session.Remove("2fa_expiry");
-
-            return RedirectToAction("Index", "Words");
         }
 
         private async Task Send2faEmailAsync(string targetEmail, string code)
