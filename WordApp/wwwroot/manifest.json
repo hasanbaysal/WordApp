@@ -1,0 +1,49 @@
+{
+  "id": "/",
+  "name": "WordApp - Kişisel Kelime Öğrenme Platformu",
+  "short_name": "WordApp",
+  "description": "Aralıklı tekrar (SRS) sistemiyle kişisel İngilizce kelime öğrenme ve seviyelendirilmiş hikaye uygulaması.",
+  "lang": "tr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#07090e",
+  "theme_color": "#0f121a",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Yeni Kelime Ekle",
+      "short_name": "Yeni Kelime",
+      "url": "/Words/Create",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Seviyeli Hikayeler",
+      "short_name": "Hikayeler",
+      "url": "/Stories",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -121,22 +121,36 @@ $(document).ready(function() {
     if ($toggle.length) {
         const $icon = $toggle.find('i');
 
-        function updateIcon(theme) {
+        function updateThemeChrome(theme) {
             if (theme === 'light') {
                 $icon.attr('class', 'bi bi-moon-stars-fill');
             } else {
                 $icon.attr('class', 'bi bi-sun-fill');
             }
+
+            const themeMeta = document.getElementById('theme-color-meta');
+            if (themeMeta) {
+                themeMeta.setAttribute('content', theme === 'light' ? '#ffffff' : '#0f121a');
+            }
         }
 
         const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-        updateIcon(currentTheme);
+        updateThemeChrome(currentTheme);
 
         $toggle.click(function() {
             const activeTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme', activeTheme);
             localStorage.setItem('theme', activeTheme);
-            updateIcon(activeTheme);
+            updateThemeChrome(activeTheme);
+        });
+    }
+
+    // Register PWA Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                console.warn('Service worker registration skipped:', err);
+            });
         });
     }
 });
