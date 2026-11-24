@@ -188,6 +188,65 @@ namespace WordApp.Data
                     });
             }
 
+            if (!context.StickyNotes.Any())
+            {
+                var adminUserId = context.Users.Select(u => u.Id).FirstOrDefault();
+
+                var dailyNote = new StickyNote
+                {
+                    Id = StickyNoteConstants.DailyNoteId,
+                    UserId = adminUserId,
+                    Title = StickyNoteConstants.DailyNoteTitle,
+                    IsDaily = true,
+                    Color = "yellow",
+                    PlainText = "Bugün yapılacaklar ve hızlı notlarım.\nMasaüstü MyStickyNotes ile otomatik senkronize olur.",
+                    AlwaysOnTop = true,
+                    CreatedAt = now.AddDays(-3),
+                    UpdatedAt = now.AddMinutes(-15)
+                };
+                dailyNote.SetChecklist(new[]
+                {
+                    new ChecklistItemDto { Id = "9f8c2a10-4b3e-4c11-9d2a-112233445501", Text = "Günlük kelime tekrarlarını tamamla", Done = false },
+                    new ChecklistItemDto { Id = "9f8c2a10-4b3e-4c11-9d2a-112233445502", Text = "Masaüstü senkronizasyonunu test et", Done = true }
+                });
+
+                var projectNote = new StickyNote
+                {
+                    Id = "9f8c2a10-4b3e-4c11-9d2a-112233445510",
+                    UserId = adminUserId,
+                    Title = "Haftalık Hedefler",
+                    IsDaily = false,
+                    Color = "blue",
+                    PlainText = "İngilizce okuma pratiği için her akşam 1 seviyeli hikaye oku ve yeni kelimeleri ekle.",
+                    AlwaysOnTop = false,
+                    ReminderRemindAt = now.AddHours(4),
+                    ReminderMessage = "Akşam tekrar zamanı",
+                    ReminderDismissed = false,
+                    CreatedAt = now.AddDays(-2),
+                    UpdatedAt = now.AddHours(-1)
+                };
+                projectNote.SetChecklist(new[]
+                {
+                    new ChecklistItemDto { Id = "9f8c2a10-4b3e-4c11-9d2a-112233445511", Text = "B2 seviyesinde 2 hikaye oku", Done = false },
+                    new ChecklistItemDto { Id = "9f8c2a10-4b3e-4c11-9d2a-112233445512", Text = "10 yeni fiil ekle", Done = false }
+                });
+
+                var quickIdeaNote = new StickyNote
+                {
+                    Id = "9f8c2a10-4b3e-4c11-9d2a-112233445520",
+                    UserId = adminUserId,
+                    Title = "Hızlı Fikirler",
+                    IsDaily = false,
+                    Color = "green",
+                    PlainText = "• Sesli telaffuz tekrarı ekle\n• Kısa notları renklerle kategorize et",
+                    AlwaysOnTop = false,
+                    CreatedAt = now.AddDays(-1),
+                    UpdatedAt = now.AddHours(-3)
+                };
+
+                context.StickyNotes.AddRange(dailyNote, projectNote, quickIdeaNote);
+            }
+
             context.SaveChanges();
         }
 

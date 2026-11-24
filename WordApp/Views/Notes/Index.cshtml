@@ -1,0 +1,951 @@
+@{
+    ViewData["Title"] = "Notlarım";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4 mb-4">
+    <div>
+        <h1 class="section-page-title m-0 d-flex align-items-center gap-2">
+            <i class="bi bi-sticky-fill text-warning"></i> Notlarım
+        </h1>
+        <p class="text-muted mb-0 mt-1">Masaüstü Sticky Notes uygulamanızla çift yönlü senkronize kişisel yapışkan notlarınız</p>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <button type="button" id="btn-sync-info" class="btn btn-secondary-custom btn-sm-custom" title="Masaüstü API Bağlantı Bilgisi">
+            <i class="bi bi-plug-fill me-1"></i> API Bilgisi
+        </button>
+        <button type="button" id="btn-refresh-notes" class="btn btn-secondary-custom btn-sm-custom" title="Notları Yenile">
+            <i class="bi bi-arrow-clockwise me-1"></i> Yenile
+        </button>
+        <button type="button" id="btn-new-note" class="btn-indigo">
+            <i class="bi bi-plus-circle-fill"></i> Yeni Not
+        </button>
+    </div>
+</div>
+
+<!-- Metrics Grid -->
+<div class="metrics-grid mt-2">
+    <div class="metric-card">
+        <div class="metric-icon total">
+            <i class="bi bi-sticky"></i>
+        </div>
+        <div>
+            <div class="metric-value" id="sn-stat-total">-</div>
+            <div class="metric-label">Toplam Not</div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon learned">
+            <i class="bi bi-check2-square"></i>
+        </div>
+        <div>
+            <div class="metric-value" id="sn-stat-tasks">-</div>
+            <div class="metric-label">Bekleyen Görev</div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon due">
+            <i class="bi bi-bell-fill"></i>
+        </div>
+        <div>
+            <div class="metric-value" id="sn-stat-reminders">-</div>
+            <div class="metric-label">Aktif Hatırlatıcı</div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon" style="background: rgba(99, 102, 241, 0.14); color: #818cf8;">
+            <i class="bi bi-arrow-repeat"></i>
+        </div>
+        <div>
+            <div class="metric-value sn-metric-date" id="sn-stat-updated">-</div>
+            <div class="metric-label">Son Senkron / Güncelleme</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Panel -->
+<div class="filters-panel">
+    <div class="filters-title">
+        <i class="bi bi-filter-left text-primary"></i> Not Ara & Filtrele
+    </div>
+    <div class="row g-3 align-items-center">
+        <div class="col-lg-5 col-md-12">
+            <input type="text" id="sn-search-input" class="form-control filter-control w-100" placeholder="Başlık, not içeriği veya görevlerde ara..." />
+        </div>
+        <div class="col-lg-4 col-md-7">
+            <div class="sn-color-filter-bar" id="sn-color-filter-bar" role="group" aria-label="Renk Filtresi">
+                <button type="button" class="sn-color-filter-pill active" data-color="all" title="Tüm Renkler">Tümü</button>
+                <button type="button" class="sn-color-dot sn-dot-yellow" data-color="yellow" title="Sarı"></button>
+                <button type="button" class="sn-color-dot sn-dot-green" data-color="green" title="Yeşil"></button>
+                <button type="button" class="sn-color-dot sn-dot-pink" data-color="pink" title="Pembe"></button>
+                <button type="button" class="sn-color-dot sn-dot-purple" data-color="purple" title="Mor"></button>
+                <button type="button" class="sn-color-dot sn-dot-blue" data-color="blue" title="Mavi"></button>
+                <button type="button" class="sn-color-dot sn-dot-charcoal" data-color="charcoal" title="Kömür"></button>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-5 d-flex gap-2 align-items-center justify-content-lg-end flex-wrap">
+            <button type="button" class="sn-quick-filter-btn" id="sn-filter-reminder" data-active="false" title="Sadece Hatırlatıcılı Notlar">
+                <i class="bi bi-bell"></i> Hatırlatıcı
+            </button>
+            <button type="button" class="sn-quick-filter-btn" id="sn-filter-tasks" data-active="false" title="Sadece Görevli Notlar">
+                <i class="bi bi-list-check"></i> Görevli
+            </button>
+            <button type="button" id="sn-clear-filters" class="btn btn-secondary-custom btn-sm-custom" title="Filtreleri Temizle">
+                <i class="bi bi-x-circle"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Loader -->
+<div class="text-center py-5" id="sn-loader">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Yükleniyor...</span>
+    </div>
+    <p class="text-muted mt-2">Notlar yükleniyor...</p>
+</div>
+
+<!-- Pinned Daily Note Section -->
+<div id="sn-daily-container" class="mb-4" style="display:none;"></div>
+
+<!-- Other Notes Grid -->
+<div id="sn-grid-container" class="sn-notes-grid" style="display:none;"></div>
+
+<!-- Empty Filter Placeholder -->
+<div class="text-center py-5" id="sn-empty-placeholder" style="display:none;">
+    <i class="bi bi-sticky fs-1 text-muted"></i>
+    <h4 class="mt-3 text-secondary">Eşleşen Not Bulunamadı</h4>
+    <p class="text-muted">Arama/renk filtresini temizleyebilir veya hemen yeni bir yapışkan not oluşturabilirsiniz.</p>
+    <button type="button" class="btn-indigo btn-sm-custom mt-2" id="sn-empty-new-btn">
+        <i class="bi bi-plus-circle"></i> Yeni Not Oluştur
+    </button>
+</div>
+
+<!-- Create / Edit Note Modal -->
+<div class="modal fade" id="snEditorModal" tabindex="-1" aria-labelledby="snEditorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content modal-custom-content sn-editor-modal-content" id="sn-editor-modal-surface" data-color="yellow">
+            <div class="modal-header modal-custom-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <i class="bi bi-sticky-fill text-warning fs-5" id="sn-editor-icon"></i>
+                    <h5 class="modal-title modal-custom-title m-0" id="snEditorModalLabel">Yeni Not</h5>
+                    <span class="sn-daily-badge" id="sn-editor-daily-badge" style="display:none;">
+                        <i class="bi bi-pin-angle-fill me-1"></i>Sabit Günlük Notu
+                    </span>
+                </div>
+                <button type="button" class="btn-close btn-close-white gn-modal-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="sn-edit-id" value="" />
+                <input type="hidden" id="sn-edit-is-daily" value="false" />
+                <input type="hidden" id="sn-edit-original-plaintext" value="" />
+                <input type="hidden" id="sn-edit-has-xaml" value="false" />
+
+                <!-- Color & AlwaysOnTop Row -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <div>
+                        <label class="form-label small text-muted mb-1 d-block">Not Rengi</label>
+                        <div class="d-flex align-items-center gap-2" id="sn-editor-colors">
+                            <button type="button" class="sn-color-swatch sn-dot-yellow" data-color="yellow" title="Sarı"></button>
+                            <button type="button" class="sn-color-swatch sn-dot-green" data-color="green" title="Yeşil"></button>
+                            <button type="button" class="sn-color-swatch sn-dot-pink" data-color="pink" title="Pembe"></button>
+                            <button type="button" class="sn-color-swatch sn-dot-purple" data-color="purple" title="Mor"></button>
+                            <button type="button" class="sn-color-swatch sn-dot-blue" data-color="blue" title="Mavi"></button>
+                            <button type="button" class="sn-color-swatch sn-dot-charcoal" data-color="charcoal" title="Kömür"></button>
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="sn-edit-always-on-top">
+                        <label class="form-check-label small" for="sn-edit-always-on-top">
+                            <i class="bi bi-pin-angle me-1"></i>Masaüstünde Her Zaman Üstte
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Title -->
+                <div class="mb-3">
+                    <label for="sn-edit-title" class="form-label small text-muted">Başlık</label>
+                    <input type="text" id="sn-edit-title" class="form-control filter-control" placeholder="Başlık (opsiyonel)" maxlength="200" />
+                </div>
+
+                <!-- Rich Text Preservation Info -->
+                <div id="sn-xaml-notice" class="sn-xaml-notice mb-3" style="display:none;">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <span>Bu not masaüstü zengin metin biçimi içeriyor. Sadece renk, görev veya hatırlatıcı değiştirirseniz masaüstü biçimi korunur; metni değiştirirseniz düz metin olarak güncellenir.</span>
+                </div>
+
+                <!-- Plain Text -->
+                <div class="mb-4">
+                    <label for="sn-edit-plaintext" class="form-label small text-muted">Not İçeriği</label>
+                    <textarea id="sn-edit-plaintext" class="form-control filter-control sn-editor-textarea" rows="6" placeholder="Notunuzu buraya yazın..."></textarea>
+                </div>
+
+                <!-- Checklist Editor -->
+                <div class="sn-editor-section mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label small text-muted m-0 fw-semibold">
+                            <i class="bi bi-check2-square me-1 text-primary"></i> Görev Listesi (Checklist)
+                        </label>
+                        <span class="small text-muted" id="sn-editor-checklist-count">0 görev</span>
+                    </div>
+
+                    <div id="sn-editor-checklist-items" class="sn-editor-checklist-list mb-2"></div>
+
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="sn-new-checklist-text" class="form-control filter-control" placeholder="Yeni görev ekle ve Enter'a bas..." />
+                        <button type="button" id="sn-add-checklist-btn" class="btn btn-indigo btn-sm px-3">
+                            <i class="bi bi-plus-lg"></i> Ekle
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Reminder Editor -->
+                <div class="sn-editor-section">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <label class="form-label small text-muted m-0 fw-semibold">
+                            <i class="bi bi-bell-fill me-1 text-warning"></i> Hatırlatıcı
+                        </label>
+                        <div class="d-flex gap-1 flex-wrap">
+                            <button type="button" class="btn btn-secondary-custom btn-sm py-0 px-2 sn-reminder-preset" data-preset="1h">+1 Saat</button>
+                            <button type="button" class="btn btn-secondary-custom btn-sm py-0 px-2 sn-reminder-preset" data-preset="tomorrow">Yarın 09:00</button>
+                            <button type="button" class="btn btn-secondary-custom btn-sm py-0 px-2 text-danger" id="sn-clear-reminder-btn">
+                                <i class="bi bi-x-lg"></i> Kaldır / Tamamlandı
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-5">
+                            <input type="datetime-local" id="sn-edit-reminder-at" class="form-control filter-control form-control-sm" />
+                        </div>
+                        <div class="col-md-7">
+                            <input type="text" id="sn-edit-reminder-msg" class="form-control filter-control form-control-sm" placeholder="Hatırlatıcı mesajı (örn: Toplantıyı unutma)" />
+                        </div>
+                    </div>
+                    <div id="sn-reminder-status-hint" class="small text-muted mt-1" style="display:none;"></div>
+                </div>
+            </div>
+            <div class="modal-footer modal-custom-footer d-flex justify-content-between align-items-center">
+                <div class="small text-muted d-none d-sm-block">
+                    <kbd>Ctrl</kbd> + <kbd>S</kbd> ile hızlı kaydet
+                </div>
+                <div class="d-flex gap-2 ms-auto">
+                    <button type="button" class="btn btn-secondary-custom btn-sm-custom" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" id="sn-save-note-btn" class="btn-indigo btn-sm-custom">
+                        <i class="bi bi-check-lg me-1"></i> Kaydet
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- API / Desktop Sync Info Modal -->
+<div class="modal fade" id="snSyncInfoModal" tabindex="-1" aria-labelledby="snSyncInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-custom-content">
+            <div class="modal-header modal-custom-header">
+                <h5 class="modal-title modal-custom-title" id="snSyncInfoModalLabel">
+                    <i class="bi bi-plug-fill text-primary me-2"></i>Masaüstü Senkronizasyon (API)
+                </h5>
+                <button type="button" class="btn-close btn-close-white gn-modal-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted small mb-3">
+                    MyStickyNotes masaüstü uygulamanız mevcut WordApp kullanıcı adınız ve şifrenizle JWT alarak notlarınızı otomatik senkronize edebilir.
+                </p>
+                <div class="mb-3">
+                    <label class="form-label small text-muted mb-1">Base URL</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="sn-api-base-url" class="form-control filter-control" readonly />
+                        <button type="button" class="btn btn-secondary-custom" id="sn-copy-base-url" title="Kopyala">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="small">
+                    <div class="mb-2"><strong>Kullanıcı Adı:</strong> <code>@ViewBag.CurrentUsername</code></div>
+                    <div class="mb-1"><strong>Auth Endpoint'leri:</strong></div>
+                    <ul class="text-muted ps-3 mb-2">
+                        <li><code>POST /api/auth/login</code></li>
+                        <li><code>POST /api/auth/refresh</code></li>
+                        <li><code>POST /api/auth/logout</code></li>
+                    </ul>
+                    <div class="mb-1"><strong>Not Endpoint'leri (Bearer JWT):</strong></div>
+                    <ul class="text-muted ps-3 mb-0">
+                        <li><code>GET /api/notes</code> <em>(?since=&amp;includeDeleted=true)</em></li>
+                        <li><code>GET /api/notes/{id}</code></li>
+                        <li><code>POST /api/notes</code></li>
+                        <li><code>PUT /api/notes/{id}</code></li>
+                        <li><code>DELETE /api/notes/{id}</code></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer modal-custom-footer">
+                <button type="button" class="btn btn-secondary-custom btn-sm-custom" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const VALID_COLORS = ['yellow', 'green', 'pink', 'purple', 'blue', 'charcoal'];
+            const COLOR_LABELS = {
+                yellow: 'Sarı',
+                green: 'Yeşil',
+                pink: 'Pembe',
+                purple: 'Mor',
+                blue: 'Mavi',
+                charcoal: 'Kömür'
+            };
+
+            let allNotes = [];
+            let filterColor = 'all';
+            let filterSearch = '';
+            let filterOnlyReminders = false;
+            let filterOnlyTasks = false;
+            let editorChecklist = [];
+            let editorSelectedColor = 'yellow';
+            let editorModalInstance = null;
+            let isSaving = false;
+
+            function generateUuid() {
+                if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                    return window.crypto.randomUUID();
+                }
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            }
+
+            function escapeHtml(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
+            function formatDateTimeTr(iso) {
+                if (!iso) return '-';
+                const d = new Date(iso);
+                if (isNaN(d.getTime())) return '-';
+                return d.toLocaleString('tr-TR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            function formatShortDateTr(iso) {
+                if (!iso) return '-';
+                const d = new Date(iso);
+                if (isNaN(d.getTime())) return '-';
+                return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) +
+                    ' · ' + d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+            }
+
+            function toDatetimeLocalValue(iso) {
+                if (!iso) return '';
+                const d = new Date(iso);
+                if (isNaN(d.getTime())) return '';
+                const pad = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+
+            async function postJson(url, body) {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(data.message || 'İşlem başarısız oldu.');
+                }
+                return data;
+            }
+
+            function updateStatsFromNotes() {
+                const total = allNotes.length;
+                const activeTasks = allNotes.reduce((acc, n) => acc + (n.checklist || []).filter(c => !c.done).length, 0);
+                const activeReminders = allNotes.filter(n => n.reminder && !n.reminder.dismissed).length;
+                const latest = allNotes.reduce((max, n) => {
+                    const t = new Date(n.updatedAt).getTime();
+                    return t > max ? t : max;
+                }, 0);
+
+                $('#sn-stat-total').text(total);
+                $('#sn-stat-tasks').text(activeTasks);
+                $('#sn-stat-reminders').text(activeReminders);
+                $('#sn-stat-updated').text(latest ? formatShortDateTr(new Date(latest).toISOString()) : '-');
+            }
+
+            function matchesFilters(note) {
+                if (filterColor !== 'all' && note.color !== filterColor) return false;
+                if (filterOnlyReminders && !note.reminder) return false;
+                if (filterOnlyTasks && (!note.checklist || note.checklist.length === 0)) return false;
+
+                if (filterSearch) {
+                    const q = filterSearch.toLowerCase();
+                    const inTitle = (note.title || '').toLowerCase().includes(q);
+                    const inText = (note.plainText || '').toLowerCase().includes(q);
+                    const inChecklist = (note.checklist || []).some(c => (c.text || '').toLowerCase().includes(q));
+                    const inReminder = note.reminder && (note.reminder.message || '').toLowerCase().includes(q);
+                    if (!inTitle && !inText && !inChecklist && !inReminder) return false;
+                }
+                return true;
+            }
+
+            function renderReminderChip(note) {
+                if (!note.reminder) return '';
+                const remindDate = new Date(note.reminder.remindAt);
+                const isOverdue = !note.reminder.dismissed && remindDate.getTime() <= Date.now();
+                const statusClass = note.reminder.dismissed
+                    ? 'sn-reminder-dismissed'
+                    : (isOverdue ? 'sn-reminder-overdue' : 'sn-reminder-active');
+                const msg = note.reminder.message ? ` · ${escapeHtml(note.reminder.message)}` : '';
+
+                return `
+                    <div class="sn-reminder-chip ${statusClass}">
+                        <div class="sn-reminder-text">
+                            <i class="bi ${isOverdue ? 'bi-bell-fill' : 'bi-alarm'} me-1"></i>
+                            <span>${formatDateTimeTr(note.reminder.remindAt)}${msg}</span>
+                        </div>
+                        <button type="button" class="sn-reminder-done-btn" data-id="${escapeHtml(note.id)}" title="Hatırlatıcıyı Tamamlandı Olarak İşaretle">
+                            <i class="bi bi-check-lg"></i>
+                        </button>
+                    </div>`;
+            }
+
+            function renderChecklistPreview(note) {
+                const list = note.checklist || [];
+                if (list.length === 0) return '';
+                const doneCount = list.filter(i => i.done).length;
+                const itemsHtml = list.map(item => `
+                    <label class="sn-check-item ${item.done ? 'is-done' : ''}" data-note-id="${escapeHtml(note.id)}" data-item-id="${escapeHtml(item.id)}">
+                        <input type="checkbox" class="sn-card-checkbox" data-note-id="${escapeHtml(note.id)}" data-item-id="${escapeHtml(item.id)}" ${item.done ? 'checked' : ''} />
+                        <span>${escapeHtml(item.text || '(Boş görev)')}</span>
+                    </label>
+                `).join('');
+
+                return `
+                    <div class="sn-card-checklist">
+                        <div class="sn-checklist-header">
+                            <span><i class="bi bi-check2-square me-1"></i>Görevler</span>
+                            <span class="sn-checklist-progress">${doneCount}/${list.length}</span>
+                        </div>
+                        <div class="sn-checklist-items">${itemsHtml}</div>
+                    </div>`;
+            }
+
+            function renderQuickColorDots(note) {
+                return VALID_COLORS.map(c => `
+                    <button type="button"
+                        class="sn-mini-dot sn-dot-${c} ${note.color === c ? 'active' : ''}"
+                        data-id="${escapeHtml(note.id)}"
+                        data-color="${c}"
+                        title="${COLOR_LABELS[c]}"></button>
+                `).join('');
+            }
+
+            function renderNoteCard(note, isPinnedBanner) {
+                const color = VALID_COLORS.includes(note.color) ? note.color : 'yellow';
+                const titleText = note.isDaily
+                    ? 'Günlük'
+                    : (note.title && note.title.trim() ? note.title.trim() : '');
+                const hasText = note.plainText && note.plainText.trim().length > 0;
+                const hasRich = Boolean(note.contentXaml);
+
+                return `
+                    <article class="sn-note-card sn-theme-${color} ${isPinnedBanner ? 'sn-daily-card' : ''}" data-id="${escapeHtml(note.id)}">
+                        <div class="sn-card-accent"></div>
+                        <div class="sn-card-top">
+                            <div class="sn-card-title-wrap">
+                                ${note.isDaily
+                                    ? `<span class="sn-daily-badge"><i class="bi bi-pin-angle-fill me-1"></i>Günlük</span>`
+                                    : (titleText
+                                        ? `<h3 class="sn-card-title">${escapeHtml(titleText)}</h3>`
+                                        : `<h3 class="sn-card-title sn-untitled">Başlıksız Not</h3>`)}
+                                ${hasRich ? `<span class="sn-rich-pill" title="Masaüstü zengin metin biçimi senkronize"><i class="bi bi-type-bold"></i></span>` : ''}
+                            </div>
+                            <div class="sn-card-actions">
+                                <button type="button" class="sn-icon-btn sn-pin-btn ${note.alwaysOnTop ? 'is-pinned' : ''}"
+                                    data-id="${escapeHtml(note.id)}"
+                                    title="${note.alwaysOnTop ? 'Masaüstünde Her Zaman Üstte (Açık)' : 'Masaüstünde Üstte Sabitle'}">
+                                    <i class="bi ${note.alwaysOnTop ? 'bi-pin-fill' : 'bi-pin'}"></i>
+                                </button>
+                                <button type="button" class="sn-icon-btn sn-edit-btn" data-id="${escapeHtml(note.id)}" title="Düzenle">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </button>
+                                ${note.isDaily ? '' : `
+                                    <button type="button" class="sn-icon-btn sn-delete-btn" data-id="${escapeHtml(note.id)}" title="Sil">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+
+                        <div class="sn-card-body sn-open-editor-trigger" data-id="${escapeHtml(note.id)}">
+                            ${hasText
+                                ? `<div class="sn-card-plaintext">${escapeHtml(note.plainText)}</div>`
+                                : ((!note.checklist || note.checklist.length === 0)
+                                    ? `<div class="sn-card-empty-text">Not eklemek için tıklayın...</div>`
+                                    : '')}
+                        </div>
+
+                        ${renderChecklistPreview(note)}
+                        ${renderReminderChip(note)}
+
+                        <div class="sn-card-footer">
+                            <div class="sn-quick-colors" aria-label="Hızlı renk seçimi">
+                                ${renderQuickColorDots(note)}
+                            </div>
+                            <span class="sn-updated-time" title="Son Güncelleme: ${formatDateTimeTr(note.updatedAt)}">
+                                <i class="bi bi-clock me-1"></i>${formatShortDateTr(note.updatedAt)}
+                            </span>
+                        </div>
+                    </article>`;
+            }
+
+            function renderAll() {
+                updateStatsFromNotes();
+
+                const sorted = [...allNotes].sort((a, b) => {
+                    if (a.isDaily && !b.isDaily) return -1;
+                    if (!a.isDaily && b.isDaily) return 1;
+                    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+                });
+
+                const filtered = sorted.filter(matchesFilters);
+                const dailyNote = filtered.find(n => n.isDaily);
+                const regularNotes = filtered.filter(n => !n.isDaily);
+
+                if (dailyNote) {
+                    $('#sn-daily-container').html(renderNoteCard(dailyNote, true)).show();
+                } else {
+                    $('#sn-daily-container').empty().hide();
+                }
+
+                if (regularNotes.length > 0) {
+                    $('#sn-grid-container').html(regularNotes.map(n => renderNoteCard(n, false)).join('')).show();
+                } else {
+                    $('#sn-grid-container').empty().hide();
+                }
+
+                if (!dailyNote && regularNotes.length === 0) {
+                    $('#sn-empty-placeholder').show();
+                } else {
+                    $('#sn-empty-placeholder').hide();
+                }
+            }
+
+            async function loadNotes(showSpinner) {
+                if (showSpinner) $('#sn-loader').show();
+                const $refreshIcon = $('#btn-refresh-notes i');
+                $refreshIcon.addClass('sn-spin');
+                try {
+                    const res = await fetch('/Notes/List', { cache: 'no-store' });
+                    if (!res.ok) throw new Error('Notlar alınamadı.');
+                    const data = await res.json();
+                    allNotes = data.notes || [];
+                    renderAll();
+                } catch (err) {
+                    console.error(err);
+                    alert('Notlar yüklenirken bir hata oluştu.');
+                } finally {
+                    $('#sn-loader').hide();
+                    $refreshIcon.removeClass('sn-spin');
+                }
+            }
+
+            function upsertLocalNote(note) {
+                const idx = allNotes.findIndex(n => n.id === note.id);
+                if (idx >= 0) {
+                    allNotes[idx] = note;
+                } else {
+                    allNotes.unshift(note);
+                }
+                renderAll();
+            }
+
+            function setEditorColor(color) {
+                editorSelectedColor = VALID_COLORS.includes(color) ? color : 'yellow';
+                $('#sn-editor-modal-surface').attr('data-color', editorSelectedColor);
+                $('#sn-editor-colors .sn-color-swatch').removeClass('active');
+                $(`#sn-editor-colors .sn-color-swatch[data-color="${editorSelectedColor}"]`).addClass('active');
+            }
+
+            function renderEditorChecklist() {
+                const $list = $('#sn-editor-checklist-items');
+                $('#sn-editor-checklist-count').text(`${editorChecklist.length} görev`);
+                if (editorChecklist.length === 0) {
+                    $list.html('<div class="small text-muted opacity-75 py-1">Henüz görev eklenmedi.</div>');
+                    return;
+                }
+                $list.html(editorChecklist.map((item, idx) => `
+                    <div class="sn-editor-check-row" data-idx="${idx}">
+                        <input type="checkbox" class="form-check-input sn-ed-chk-done" data-idx="${idx}" ${item.done ? 'checked' : ''} />
+                        <input type="text" class="form-control form-control-sm filter-control sn-ed-chk-text ${item.done ? 'text-decoration-line-through opacity-75' : ''}" data-idx="${idx}" value="${escapeHtml(item.text)}" placeholder="Görev metni" />
+                        <button type="button" class="btn btn-sm btn-secondary-custom text-danger sn-ed-chk-remove" data-idx="${idx}" title="Görevi Sil">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `).join(''));
+            }
+
+            function openEditorModal(note) {
+                const isNew = !note;
+                const isDaily = Boolean(note && note.isDaily);
+
+                $('#sn-edit-id').val(isNew ? '' : note.id);
+                $('#sn-edit-is-daily').val(isDaily ? 'true' : 'false');
+                $('#sn-edit-original-plaintext').val(isNew ? '' : (note.plainText || ''));
+                $('#sn-edit-has-xaml').val(note && note.contentXaml ? 'true' : 'false');
+
+                $('#snEditorModalLabel').text(isNew ? 'Yeni Not' : (isDaily ? 'Günlük Notunu Düzenle' : 'Notu Düzenle'));
+                $('#sn-editor-daily-badge').toggle(isDaily);
+                $('#sn-edit-title')
+                    .val(isNew ? '' : (isDaily ? 'Günlük' : (note.title || '')))
+                    .prop('readonly', isDaily)
+                    .prop('disabled', isDaily);
+
+                $('#sn-edit-plaintext').val(isNew ? '' : (note.plainText || ''));
+                $('#sn-edit-always-on-top').prop('checked', Boolean(note && note.alwaysOnTop));
+                $('#sn-xaml-notice').toggle(Boolean(note && note.contentXaml));
+
+                setEditorColor(isNew ? 'yellow' : (note.color || 'yellow'));
+
+                editorChecklist = (note && note.checklist ? note.checklist : []).map(i => ({
+                    id: i.id || generateUuid(),
+                    text: i.text || '',
+                    done: Boolean(i.done)
+                }));
+                renderEditorChecklist();
+                $('#sn-new-checklist-text').val('');
+
+                if (note && note.reminder && note.reminder.remindAt) {
+                    $('#sn-edit-reminder-at').val(toDatetimeLocalValue(note.reminder.remindAt));
+                    $('#sn-edit-reminder-msg').val(note.reminder.message || '');
+                    $('#sn-reminder-status-hint')
+                        .text(note.reminder.dismissed
+                            ? 'Bu hatırlatıcı daha önce kapatılmış. Yeni bir saat seçerseniz tekrar aktif olur.'
+                            : 'Aktif hatırlatıcı masaüstü uygulamasıyla senkronize edilir.')
+                        .show();
+                } else {
+                    $('#sn-edit-reminder-at').val('');
+                    $('#sn-edit-reminder-msg').val('');
+                    $('#sn-reminder-status-hint').hide();
+                }
+
+                if (!editorModalInstance) {
+                    editorModalInstance = new bootstrap.Modal(document.getElementById('snEditorModal'));
+                }
+                editorModalInstance.show();
+
+                setTimeout(() => {
+                    if (isNew) {
+                        $('#sn-edit-title').trigger('focus');
+                    } else {
+                        $('#sn-edit-plaintext').trigger('focus');
+                    }
+                }, 200);
+            }
+
+            function addChecklistItemFromInput() {
+                const text = ($('#sn-new-checklist-text').val() || '').trim();
+                if (!text) return;
+                editorChecklist.push({
+                    id: generateUuid(),
+                    text,
+                    done: false
+                });
+                $('#sn-new-checklist-text').val('').trigger('focus');
+                renderEditorChecklist();
+            }
+
+            async function saveEditorNote() {
+                if (isSaving) return;
+                isSaving = true;
+                const $btn = $('#sn-save-note-btn');
+                const originalHtml = $btn.html();
+                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Kaydediliyor...');
+
+                try {
+                    const id = ($('#sn-edit-id').val() || '').trim();
+                    const isDaily = $('#sn-edit-is-daily').val() === 'true';
+                    const title = isDaily ? 'Günlük' : ($('#sn-edit-title').val() || '').trim();
+                    const plainText = $('#sn-edit-plaintext').val() || '';
+                    const alwaysOnTop = $('#sn-edit-always-on-top').is(':checked');
+
+                    // Commit any pending text typed into the new checklist input
+                    const pendingTask = ($('#sn-new-checklist-text').val() || '').trim();
+                    if (pendingTask) {
+                        editorChecklist.push({ id: generateUuid(), text: pendingTask, done: false });
+                        $('#sn-new-checklist-text').val('');
+                    }
+
+                    const cleanedChecklist = editorChecklist
+                        .filter(i => (i.text || '').trim().length > 0)
+                        .map(i => ({
+                            id: i.id || generateUuid(),
+                            text: i.text.trim(),
+                            done: Boolean(i.done)
+                        }));
+
+                    let reminder = null;
+                    const remindAtLocal = $('#sn-edit-reminder-at').val();
+                    if (remindAtLocal) {
+                        const parsedDate = new Date(remindAtLocal);
+                        if (!isNaN(parsedDate.getTime())) {
+                            reminder = {
+                                remindAt: parsedDate.toISOString(),
+                                message: ($('#sn-edit-reminder-msg').val() || '').trim(),
+                                dismissed: false
+                            };
+                        }
+                    }
+
+                    const payload = {
+                        id: id || null,
+                        title,
+                        isDaily,
+                        color: editorSelectedColor,
+                        plainText,
+                        checklist: cleanedChecklist,
+                        alwaysOnTop,
+                        reminder
+                    };
+
+                    const res = await postJson('/Notes/Save', payload);
+                    if (res.success && res.note) {
+                        upsertLocalNote(res.note);
+                        editorModalInstance.hide();
+                    }
+                } catch (err) {
+                    alert(err.message || 'Not kaydedilemedi.');
+                } finally {
+                    isSaving = false;
+                    $btn.prop('disabled', false).html(originalHtml);
+                }
+            }
+
+            $(document).ready(function () {
+                // Toolbar buttons
+                $('#btn-new-note, #sn-empty-new-btn').on('click', () => openEditorModal(null));
+                $('#btn-refresh-notes').on('click', () => loadNotes(false));
+
+                $('#btn-sync-info').on('click', function () {
+                    $('#sn-api-base-url').val(window.location.origin);
+                    new bootstrap.Modal(document.getElementById('snSyncInfoModal')).show();
+                });
+
+                $('#sn-copy-base-url').on('click', function () {
+                    const val = $('#sn-api-base-url').val();
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(val);
+                    }
+                    $(this).html('<i class="bi bi-check-lg text-success"></i>');
+                    setTimeout(() => $(this).html('<i class="bi bi-clipboard"></i>'), 1500);
+                });
+
+                // Filters
+                $('#sn-search-input').on('input', function () {
+                    filterSearch = ($(this).val() || '').trim();
+                    renderAll();
+                });
+
+                $('#sn-color-filter-bar').on('click', 'button', function () {
+                    filterColor = $(this).data('color');
+                    $('#sn-color-filter-bar button').removeClass('active');
+                    $(this).addClass('active');
+                    renderAll();
+                });
+
+                $('#sn-filter-reminder').on('click', function () {
+                    filterOnlyReminders = !filterOnlyReminders;
+                    $(this).toggleClass('active', filterOnlyReminders).attr('data-active', String(filterOnlyReminders));
+                    renderAll();
+                });
+
+                $('#sn-filter-tasks').on('click', function () {
+                    filterOnlyTasks = !filterOnlyTasks;
+                    $(this).toggleClass('active', filterOnlyTasks).attr('data-active', String(filterOnlyTasks));
+                    renderAll();
+                });
+
+                $('#sn-clear-filters').on('click', function () {
+                    filterSearch = '';
+                    filterColor = 'all';
+                    filterOnlyReminders = false;
+                    filterOnlyTasks = false;
+                    $('#sn-search-input').val('');
+                    $('#sn-color-filter-bar button').removeClass('active');
+                    $('#sn-color-filter-bar button[data-color="all"]').addClass('active');
+                    $('#sn-filter-reminder, #sn-filter-tasks').removeClass('active').attr('data-active', 'false');
+                    renderAll();
+                });
+
+                // Card Interactions (delegated)
+                $(document).on('click', '.sn-edit-btn, .sn-open-editor-trigger', function () {
+                    const id = String($(this).data('id'));
+                    const note = allNotes.find(n => n.id === id);
+                    if (note) openEditorModal(note);
+                });
+
+                $(document).on('click', '.sn-mini-dot', async function (e) {
+                    e.stopPropagation();
+                    const id = String($(this).data('id'));
+                    const color = String($(this).data('color'));
+                    try {
+                        const res = await postJson('/Notes/QuickColor', { id, color });
+                        if (res.success && res.note) upsertLocalNote(res.note);
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                });
+
+                $(document).on('click', '.sn-pin-btn', async function (e) {
+                    e.stopPropagation();
+                    const id = String($(this).data('id'));
+                    try {
+                        const res = await postJson('/Notes/TogglePin', { id });
+                        if (res.success && res.note) upsertLocalNote(res.note);
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                });
+
+                $(document).on('change', '.sn-card-checkbox', async function (e) {
+                    e.stopPropagation();
+                    const id = String($(this).data('note-id'));
+                    const itemId = String($(this).data('item-id'));
+                    const done = $(this).is(':checked');
+                    try {
+                        const res = await postJson('/Notes/ToggleChecklistItem', { id, itemId, done });
+                        if (res.success && res.note) upsertLocalNote(res.note);
+                    } catch (err) {
+                        alert(err.message);
+                        loadNotes(false);
+                    }
+                });
+
+                $(document).on('click', '.sn-reminder-done-btn', async function (e) {
+                    e.stopPropagation();
+                    const id = String($(this).data('id'));
+                    try {
+                        const res = await postJson('/Notes/CompleteReminder', { id });
+                        if (res.success && res.note) upsertLocalNote(res.note);
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                });
+
+                $(document).on('click', '.sn-delete-btn', async function (e) {
+                    e.stopPropagation();
+                    const id = String($(this).data('id'));
+                    const note = allNotes.find(n => n.id === id);
+                    if (!note || note.isDaily) return;
+
+                    const label = note.title && note.title.trim() ? `"${note.title.trim()}"` : 'Bu notu';
+                    if (!confirm(`${label} silmek istediğinize emin misiniz? Masaüstü uygulamasında da silinecektir.`)) {
+                        return;
+                    }
+
+                    try {
+                        const res = await postJson('/Notes/Delete', { id });
+                        if (res.success) {
+                            allNotes = allNotes.filter(n => n.id !== id);
+                            renderAll();
+                        }
+                    } catch (err) {
+                        alert(err.message || 'Not silinemedi.');
+                    }
+                });
+
+                // Modal Editor Events
+                $('#sn-editor-colors').on('click', '.sn-color-swatch', function () {
+                    setEditorColor($(this).data('color'));
+                });
+
+                $('#sn-add-checklist-btn').on('click', addChecklistItemFromInput);
+                $('#sn-new-checklist-text').on('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addChecklistItemFromInput();
+                    }
+                });
+
+                $('#sn-editor-checklist-items')
+                    .on('change', '.sn-ed-chk-done', function () {
+                        const idx = Number($(this).data('idx'));
+                        if (editorChecklist[idx]) {
+                            editorChecklist[idx].done = $(this).is(':checked');
+                            renderEditorChecklist();
+                        }
+                    })
+                    .on('input', '.sn-ed-chk-text', function () {
+                        const idx = Number($(this).data('idx'));
+                        if (editorChecklist[idx]) {
+                            editorChecklist[idx].text = $(this).val();
+                        }
+                    })
+                    .on('click', '.sn-ed-chk-remove', function () {
+                        const idx = Number($(this).data('idx'));
+                        editorChecklist.splice(idx, 1);
+                        renderEditorChecklist();
+                    });
+
+                $('.sn-reminder-preset').on('click', function () {
+                    const preset = $(this).data('preset');
+                    const target = new Date();
+                    if (preset === '1h') {
+                        target.setHours(target.getHours() + 1);
+                        target.setSeconds(0, 0);
+                    } else if (preset === 'tomorrow') {
+                        target.setDate(target.getDate() + 1);
+                        target.setHours(9, 0, 0, 0);
+                    }
+                    $('#sn-edit-reminder-at').val(toDatetimeLocalValue(target.toISOString()));
+                    $('#sn-reminder-status-hint').text('Hatırlatıcı aktif olarak kaydedilecek.').show();
+                });
+
+                $('#sn-clear-reminder-btn').on('click', function () {
+                    $('#sn-edit-reminder-at').val('');
+                    $('#sn-edit-reminder-msg').val('');
+                    $('#sn-reminder-status-hint').hide();
+                });
+
+                $('#sn-save-note-btn').on('click', saveEditorNote);
+
+                // Ctrl+S inside modal
+                $('#snEditorModal').on('keydown', function (e) {
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                        e.preventDefault();
+                        saveEditorNote();
+                    }
+                });
+
+                // Refresh when returning to browser tab so desktop edits appear immediately
+                document.addEventListener('visibilitychange', function () {
+                    if (document.visibilityState === 'visible' && !$('#snEditorModal').hasClass('show')) {
+                        loadNotes(false);
+                    }
+                });
+
+                loadNotes(true);
+            });
+        })();
+    </script>
+}

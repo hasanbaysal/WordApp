@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<IStickyNoteService, StickyNoteService>();
 builder.Services.AddHostedService<NotificationService>();
 
 var useInMemoryDb = builder.Environment.IsDevelopment()
@@ -41,7 +44,7 @@ if (!string.IsNullOrWhiteSpace(dpKeyDir))
     dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dpKeyDir));
 }
 
-// Configure Cookie Authentication
+// Configure Cookie (Web UI) + JWT Bearer (Desktop Sync API) Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -49,7 +52,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/Account/Login";
         options.ExpireTimeSpan = TimeSpan.FromDays(10); // Persistent login: 10 days
         options.SlidingExpiration = true; // Sliding expiration: refreshed on every visit
-    });
+    })
+    .AddScheme<AuthenticationSchemeOptions, JwtBearerAuthenticationHandler>(
+        JwtBearerAuthenticationHandler.SchemeName,
+        _ => { });
 
 // Configure Session (for CAPTCHA and 2FA)
 builder.Services.AddSession(options =>

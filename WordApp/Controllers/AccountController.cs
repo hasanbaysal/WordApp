@@ -129,7 +129,7 @@ namespace WordApp.Controllers
                     // Development shortcut: skip 2FA email and sign in directly
                     if (bypass)
                     {
-                        await SignInUserAsync(user.Username);
+                        await SignInUserAsync(user);
                         return RedirectToAction("Index", "Words");
                     }
 
@@ -346,7 +346,7 @@ namespace WordApp.Controllers
                 return RedirectToAction("Login");
             }
 
-            await SignInUserAsync(user.Username);
+            await SignInUserAsync(user);
 
             // Clear 2FA session variables
             HttpContext.Session.Remove("2fa_code");
@@ -356,11 +356,12 @@ namespace WordApp.Controllers
             return RedirectToAction("Index", "Words");
         }
 
-        private async Task SignInUserAsync(string username)
+        private async Task SignInUserAsync(User user)
         {
             var claims = new[]
             {
-                new Claim(ClaimTypes.Name, username),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.Role, "Admin")
             };
 

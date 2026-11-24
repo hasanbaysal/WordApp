@@ -61,6 +61,131 @@ namespace WordApp.Migrations
                     b.ToTable("grammar_notes");
                 });
 
+            modelBuilder.Entity("WordApp.Models.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DeviceName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("device_name");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_refresh_tokens_token_hash");
+
+                    b.ToTable("refresh_tokens");
+                });
+
+            modelBuilder.Entity("WordApp.Models.StickyNote", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AlwaysOnTop")
+                        .HasColumnType("boolean")
+                        .HasColumnName("always_on_top");
+
+                    b.Property<string>("ChecklistJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("checklist");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("color");
+
+                    b.Property<string>("ContentXaml")
+                        .HasColumnType("text")
+                        .HasColumnName("content_xaml");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<bool>("IsDaily")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_daily");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("PlainText")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("plain_text");
+
+                    b.Property<bool>("ReminderDismissed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("reminder_dismissed");
+
+                    b.Property<string>("ReminderMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("reminder_message");
+
+                    b.Property<DateTime?>("ReminderRemindAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reminder_remind_at");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "IsDeleted", "UpdatedAt")
+                        .HasDatabaseName("ix_sticky_notes_user_deleted_updated");
+
+                    b.ToTable("sticky_notes");
+                });
+
             modelBuilder.Entity("WordApp.Models.Story", b =>
                 {
                     b.Property<int>("Id")

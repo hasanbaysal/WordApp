@@ -70,6 +70,11 @@
                                     <i class="bi bi-journal-richtext me-1"></i> Gramer Notları
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link px-3 py-2 rounded-3 @(ViewContext.RouteData.Values["controller"]?.ToString() == "Notes" ? "active" : "")" asp-controller="Notes" asp-action="Index">
+                                    <i class="bi bi-sticky-fill me-1"></i> Notlarım
+                                </a>
+                            </li>
                         </ul>
                         <div class="d-flex align-items-center gap-3">
                             <span class="user-badge d-none d-md-flex align-items-center gap-2">

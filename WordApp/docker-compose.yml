@@ -18,6 +18,7 @@ services:
       - TelegramSettings__BotToken=${TELEGRAM_BOT_TOKEN}
       - TelegramSettings__ChatId=${TELEGRAM_CHAT_ID}
       - TelegramSettings__Enabled=true
+      - JwtSettings__SecretKey=${JWT_SECRET:-}
       - DataProtection__KeyDirectory=/app/keys
       - ASPNETCORE_ENVIRONMENT=Production
     volumes:
